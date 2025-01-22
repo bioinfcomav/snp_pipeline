@@ -1,4 +1,6 @@
 from pathlib import Path
+import tempfile
+import shutil
 
 from reads_pipeline import run_fastqc
 
@@ -7,4 +9,8 @@ TEST_PROJECT1_DIR = TEST_DATA_DIR / "project1"
 
 
 def test_run_stats():
-    run_fastqc(TEST_PROJECT1_DIR, re_run=True)
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
+        run_fastqc(project_dir)
+
+    # check rerun
