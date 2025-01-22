@@ -1,0 +1,12 @@
+[project]
+name = "snp-pipeline"
+version = "0.1.0"
+description = "Pipeline to clean and map reads"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]

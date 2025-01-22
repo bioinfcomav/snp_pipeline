@@ -1,0 +1,6 @@
+Metadata-Version: 2.2
+Name: snp-pipeline
+Version: 0.1.0
+Summary: Pipeline to clean and map reads
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown

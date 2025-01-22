@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/reads_pipeline/__init__.py
+src/reads_pipeline/read_stats.py
+src/snp_pipeline.egg-info/PKG-INFO
+src/snp_pipeline.egg-info/SOURCES.txt
+src/snp_pipeline.egg-info/dependency_links.txt
+src/snp_pipeline.egg-info/top_level.txt
+test/test_run_stats.py
