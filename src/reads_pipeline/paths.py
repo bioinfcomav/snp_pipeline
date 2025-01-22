@@ -44,11 +44,11 @@ def get_reads_stats_fastqc_parent_dir(project_dir) -> Path:
 
 
 def get_raw_reads_stats_parent_dir(project_dir) -> Path:
-    return get_reads_stats_parent_dir(project_dir) / "raw"
+    return get_reads_stats_fastqc_parent_dir(project_dir) / "raw"
 
 
 def get_clean_reads_stats_parent_dir(project_dir) -> Path:
-    return get_reads_stats_parent_dir(project_dir) / "clean"
+    return get_reads_stats_fastqc_parent_dir(project_dir) / "clean"
 
 
 def is_read_file(path: Path):

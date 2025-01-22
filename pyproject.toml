@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Pipeline to clean and map reads"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "numpy>=2.2.2",
+    "pandas>=2.2.3",
+]
 
 [dependency-groups]
 dev = [

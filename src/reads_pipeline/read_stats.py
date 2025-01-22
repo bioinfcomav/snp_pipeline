@@ -2,6 +2,11 @@ from pathlib import Path
 from subprocess import run
 import logging
 import os
+import zipfile
+import statistics
+
+import numpy
+import pandas
 
 from .paths import (
     get_reads_stats_fastqc_parent_dir,
@@ -90,11 +95,58 @@ def run_fastqc(project_dir: Path | str | None = None, re_run=False, threads=1):
                 )
 
 
-# num_reads
-# %q30
-# mean qual first 10 and last 10 nucleotides
-# %gc
-# composition acgt first 10 bases
+def _parse_fastqc_data(file_content: str):
+    modules = file_content.split(">>END_MODULE")
+    # for module in modules:
+    #    print(module)
+    basic_stats = dict([line.split("\t") for line in modules[0].splitlines()])
+    result = {}
+    result["file_name"] = basic_stats["Filename"]
+    result["num_seqs"] = basic_stats["Total Sequences"]
+    result[r"%GC"] = basic_stats[r"%GC"]
+
+    mean_qual_first_9_nucleotides = statistics.mean(
+        [float(line.split("\t")[1]) for line in modules[1].splitlines()[3:12]]
+    )
+    result["mean_qual_first_9_nucleotides"] = mean_qual_first_9_nucleotides
+
+    quals, num_reads = zip(
+        *[tuple(map(float, line.split("\t"))) for line in modules[2].splitlines()[3:]]
+    )
+    result["reads_mean_qual"] = numpy.average(quals, weights=num_reads)
+    return result
+
+
+def _parse_fastqc_zip_file(zip_path: Path):
+    with zipfile.ZipFile(zip_path, "r") as zip_file:
+        zip_name = zip_path.name.replace(".zip", "")
+        with zip_file.open(f"{zip_name}/fastqc_data.txt") as file:
+            file_content = file.read().decode()
+            return _parse_fastqc_data(file_content)
+
+
+def collect_fastqc_stats(project_dir):
+    result = {}
+    for read_type in ["raw", "clean"]:
+        if read_type == "raw":
+            stats_dir = get_raw_reads_stats_parent_dir(project_dir)
+        elif read_type == "clean":
+            stats_dir = get_clean_reads_stats_parent_dir(project_dir)
+        if not stats_dir.exists():
+            continue
+        fastq_stats_dirs = [path for path in stats_dir.iterdir() if path.is_dir()]
+
+        stats = []
+        for fastq_stats_dir in fastq_stats_dirs:
+            fastqc_zip_paths = [
+                path
+                for path in fastq_stats_dir.iterdir()
+                if str(path).endswith("_fastqc.zip")
+            ]
+            for zip_path in fastqc_zip_paths:
+                stats.append(_parse_fastqc_zip_file(zip_path))
+        result[read_type] = pandas.DataFrame(stats)
+    return result
 
 
 def run_fastp():
