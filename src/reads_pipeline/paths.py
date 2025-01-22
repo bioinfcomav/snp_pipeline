@@ -28,6 +28,12 @@ def get_raw_reads_parent_dir(project_dir, check_exists=True) -> Path:
     return path
 
 
+def get_clean_reads_parent_dir(project_dir) -> Path:
+    reads_dir = get_reads_dir(project_dir)
+    path = reads_dir / "clean"
+    return path
+
+
 def get_reads_stats_parent_dir(project_dir) -> Path:
     reads_dir = get_reads_dir(project_dir=project_dir)
     return reads_dir / "stats"
@@ -39,6 +45,10 @@ def get_reads_stats_fastqc_parent_dir(project_dir) -> Path:
 
 def get_raw_reads_stats_parent_dir(project_dir) -> Path:
     return get_reads_stats_parent_dir(project_dir) / "raw"
+
+
+def get_clean_reads_stats_parent_dir(project_dir) -> Path:
+    return get_reads_stats_parent_dir(project_dir) / "clean"
 
 
 def is_read_file(path: Path):
