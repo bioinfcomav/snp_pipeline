@@ -54,5 +54,5 @@ def get_read_files_in_dir(dir_path: Path) -> list[Path]:
 
 
 def get_log_path(project_dir) -> Path:
-    log_path = project_dir / "log.txt"
+    log_path = get_project_dir(project_dir) / "log.txt"
     return log_path
