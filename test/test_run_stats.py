@@ -13,4 +13,5 @@ def test_run_stats():
         shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
         run_fastqc(project_dir)
 
-    # check rerun
+        run_fastqc(project_dir, re_run=False)
+        run_fastqc(project_dir, re_run=True)

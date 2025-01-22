@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 
 FASTQC_BIN = "fastqc"
+FASTQ_EXT = ".fastq.gz"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
@@ -44,7 +45,7 @@ def is_read_file(path: Path):
     if path.is_dir():
         return False
 
-    if str(path).endswith(".fastq.gz"):
+    if str(path).endswith(FASTQ_EXT):
         return True
     return False
 
