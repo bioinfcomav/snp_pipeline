@@ -31,7 +31,7 @@ def run_cmd(cmd, project_dir):
     return {"process": process}
 
 
-def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run):
+def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run, threads: int):
     expected_zip_file = out_stats_dir / reads_path.name.replace(
         FASTQ_EXT, "_fastqc.zip"
     )
@@ -47,11 +47,16 @@ def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run):
         if expected_zip_file.exists():
             return
 
-    cmd = [FASTQC_BIN, "-o", str(out_stats_dir), str(reads_path)]
+    cmd = [FASTQC_BIN, "-o", str(out_stats_dir)]
+    if threads > 1:
+        cmd.extend(["--threads", str(threads)])
+
+    cmd.append(str(reads_path))
+
     run_cmd(cmd, project_dir)
 
 
-def run_fastqc(project_dir: Path | str | None = None, re_run=False):
+def run_fastqc(project_dir: Path | str | None = None, re_run=False, threads=1):
     raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
 
     raw_reads_dirs = [path for path in raw_reads_parent_dir.iterdir() if path.is_dir()]
@@ -67,7 +72,9 @@ def run_fastqc(project_dir: Path | str | None = None, re_run=False):
         out_stats_dir = raw_stats_dir / dir_name
         out_stats_dir.mkdir(exist_ok=True)
         for reads_path in get_read_files_in_dir(raw_reads_dir):
-            run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run=re_run)
+            run_fastqc_for_file(
+                reads_path, out_stats_dir, project_dir, re_run=re_run, threads=threads
+            )
 
 
 def run_fastp():
