@@ -1,8 +1,10 @@
 from pathlib import Path
 import os
+from collections import defaultdict
 
 FASTQC_BIN = "fastqc"
 FASTQ_EXT = ".fastq.gz"
+FASTP_BIN = "fastp"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
@@ -67,3 +69,51 @@ def get_read_files_in_dir(dir_path: Path) -> list[Path]:
 def get_log_path(project_dir) -> Path:
     log_path = get_project_dir(project_dir) / "log.txt"
     return log_path
+
+
+def _parse_read_file_name(path):
+    if not is_read_file(path):
+        raise ValueError(f"The given path does not correspond to a read file: {path}")
+
+    file_base_name = path.name.removesuffix(FASTQ_EXT)
+    items = file_base_name.split(".")
+
+    if items[-1].startswith("p") and items[-1][1:].isdigit():
+        pair_number = int(items[-1][1:])
+        base_name = ".".join(items[:-1])
+    else:
+        pair_number = None
+        base_name = ".".join(items)
+    return {"base_name": base_name, "pair_number": pair_number}
+
+
+def get_paired_and_unpaired_read_files_in_dir(dir_path: Path) -> list[tuple[Path]]:
+    read_files = get_read_files_in_dir(dir_path=dir_path)
+
+    paired_reads = defaultdict(list)
+    for read_file in read_files:
+        res = _parse_read_file_name(read_file)
+        paired_reads[res["base_name"]].append((read_file, res["pair_number"]))
+
+    for pair in paired_reads.values():
+        if len(pair) == 1:
+            path, pair_number = pair
+            if pair_number is None:
+                yield (path,)
+            else:
+                raise ValueError(
+                    f"read file seems paired but has no corresponding pair: {path}"
+                )
+        elif len(pair) == 2:
+            pair = sorted(pair, key=lambda path_pairnum: path_pairnum[1])
+            yield (pair[0][0], pair[1][0])
+        else:
+            files = ",".join([str(path_pairnum[0]) for path_pairnum in pair])
+            raise ValueError(f"More than two paired read files: {files}")
+
+
+def remove_file(path, not_exist_ok=False):
+    if not not_exist_ok and not path.exists():
+        raise ValueError(f"Path can't be removed because it doesn't exist: {path}")
+    if path.exists():
+        os.remove(path)
