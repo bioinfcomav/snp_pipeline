@@ -2,7 +2,12 @@ from pathlib import Path
 import tempfile
 import shutil
 
-from reads_pipeline import run_fastqc, collect_fastqc_stats, run_fastp
+from reads_pipeline import (
+    run_fastqc,
+    collect_fastqc_stats,
+    run_fastp,
+    collect_fastp_stats,
+)
 
 TEST_DATA_DIR = Path(__file__).absolute().parent / "data"
 TEST_PROJECT1_DIR = TEST_DATA_DIR / "project1"
@@ -24,4 +29,6 @@ def test_run_fastp():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
         run_fastp(project_dir)
+        stats = collect_fastp_stats(project_dir)
+        assert "dir" in stats.columns
         run_fastp(project_dir, re_run=True)

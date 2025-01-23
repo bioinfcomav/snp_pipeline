@@ -14,8 +14,8 @@ from .paths import (
     get_reads_stats_parent_dir,
     get_raw_reads_parent_dir,
     get_clean_reads_parent_dir,
-    get_raw_reads_stats_parent_dir,
-    get_clean_reads_stats_parent_dir,
+    get_raw_reads_fastqc_stats_parent_dir,
+    get_clean_reads_fastqc_stats_parent_dir,
 )
 from .run_cmd import run_cmd
 
@@ -53,12 +53,12 @@ def run_fastqc(project_dir: Path | str | None = None, re_run=False, threads=1):
     for read_type in ["raw", "clean"]:
         if read_type == "raw":
             reads_parent_dir = get_raw_reads_parent_dir(project_dir)
-            stats_dir = get_raw_reads_stats_parent_dir(project_dir)
+            stats_dir = get_raw_reads_fastqc_stats_parent_dir(project_dir)
         elif read_type == "clean":
             reads_parent_dir = get_clean_reads_parent_dir(project_dir)
             if not reads_parent_dir.exists():
                 continue
-            stats_dir = get_clean_reads_stats_parent_dir(project_dir)
+            stats_dir = get_clean_reads_fastqc_stats_parent_dir(project_dir)
         reads_dirs = [path for path in reads_parent_dir.iterdir() if path.is_dir()]
 
         stats_dir.mkdir(exist_ok=True)
@@ -110,9 +110,9 @@ def collect_fastqc_stats(project_dir):
     result = {}
     for read_type in ["raw", "clean"]:
         if read_type == "raw":
-            stats_dir = get_raw_reads_stats_parent_dir(project_dir)
+            stats_dir = get_raw_reads_fastqc_stats_parent_dir(project_dir)
         elif read_type == "clean":
-            stats_dir = get_clean_reads_stats_parent_dir(project_dir)
+            stats_dir = get_clean_reads_fastqc_stats_parent_dir(project_dir)
         if not stats_dir.exists():
             continue
         fastq_stats_dirs = [path for path in stats_dir.iterdir() if path.is_dir()]

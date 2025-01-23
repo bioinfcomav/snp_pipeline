@@ -45,11 +45,15 @@ def get_reads_stats_fastqc_parent_dir(project_dir) -> Path:
     return get_reads_stats_parent_dir(project_dir) / "fastqc"
 
 
-def get_raw_reads_stats_parent_dir(project_dir) -> Path:
+def get_reads_stats_fastp_parent_dir(project_dir) -> Path:
+    return get_reads_stats_parent_dir(project_dir) / "fastp"
+
+
+def get_raw_reads_fastqc_stats_parent_dir(project_dir) -> Path:
     return get_reads_stats_fastqc_parent_dir(project_dir) / "raw"
 
 
-def get_clean_reads_stats_parent_dir(project_dir) -> Path:
+def get_clean_reads_fastqc_stats_parent_dir(project_dir) -> Path:
     return get_reads_stats_fastqc_parent_dir(project_dir) / "clean"
 
 
