@@ -1,6 +1,4 @@
 from pathlib import Path
-from subprocess import run
-import logging
 import os
 import zipfile
 import statistics
@@ -11,7 +9,6 @@ import pandas
 from .paths import (
     get_reads_stats_fastqc_parent_dir,
     get_read_files_in_dir,
-    get_log_path,
     FASTQC_BIN,
     FASTQ_EXT,
     get_reads_stats_parent_dir,
@@ -20,23 +17,7 @@ from .paths import (
     get_raw_reads_stats_parent_dir,
     get_clean_reads_stats_parent_dir,
 )
-
-logger = logging.getLogger(__name__)
-
-
-def run_cmd(cmd, project_dir):
-    logging.basicConfig(filename=get_log_path(project_dir), level=logging.INFO)
-    logging.info("Running cmd: " + " ".join(cmd))
-
-    process = run(cmd, check=False, capture_output=True)
-    if process.returncode:
-        msg = f"There was a problem running: {cmd[0]}\n"
-        msg += "stderr:\n" + process.stderr.decode()
-        msg += "stdout:\n" + process.stdout.decode()
-        logging.error(msg)
-        raise RuntimeError("There was an error running the command: " + " ".join(cmd))
-
-    return {"process": process}
+from .run_cmd import run_cmd
 
 
 def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run, threads: int):
@@ -147,7 +128,3 @@ def collect_fastqc_stats(project_dir):
                 stats.append(_parse_fastqc_zip_file(zip_path))
         result[read_type] = pandas.DataFrame(stats)
     return result
-
-
-def run_fastp():
-    pass

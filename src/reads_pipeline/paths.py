@@ -87,7 +87,7 @@ def _parse_read_file_name(path):
     return {"base_name": base_name, "pair_number": pair_number}
 
 
-def get_paired_and_unpaired_read_files_in_dir(dir_path: Path) -> list[tuple[Path]]:
+def get_paired_and_unpaired_read_files_in_dir(dir_path: Path):
     read_files = get_read_files_in_dir(dir_path=dir_path)
 
     paired_reads = defaultdict(list)
