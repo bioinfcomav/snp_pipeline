@@ -1,5 +1,5 @@
 from pathlib import Path
-import os
+
 
 from .paths import (
     get_paired_and_unpaired_read_files_in_dir,
