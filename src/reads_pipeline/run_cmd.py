@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 def run_cmd(cmd, project_dir: Path):
-    logging.basicConfig(filename=get_log_path(project_dir), level=logging.INFO)
+    logging.basicConfig(
+        filename=get_log_path(project_dir), filemode="a", level=logging.INFO, force=True
+    )
     logging.info("Running cmd: " + " ".join(cmd))
 
     process = run(cmd, check=False, capture_output=True)
@@ -32,7 +34,6 @@ def run_bash_script(script_content: str, project_dir: Path):
         shell_fhand.flush()
         cmd = ["bash", shell_fhand.name]
         process = run(cmd, check=False, capture_output=True)
-        input("run")
         if process.returncode:
             msg = "There was a problem running a bash script\n"
             msg += "script\n{script_content}\n"

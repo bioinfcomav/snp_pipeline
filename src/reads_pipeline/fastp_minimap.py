@@ -1,7 +1,9 @@
 from pathlib import Path
+import logging
 
 from .paths import (
     get_project_dir,
+    get_log_path,
     get_raw_reads_parent_dir,
     get_reads_stats_fastp_parent_dir,
     get_paired_and_unpaired_read_files_in_dir,
@@ -11,6 +13,8 @@ from .paths import (
     SAMTOOLS_BIN,
 )
 from .run_cmd import run_bash_script
+
+logger = logging.getLogger(__name__)
 
 PIPE_TEMPLATE = """
 #!/usr/bin/env bash
@@ -41,6 +45,10 @@ set -o pipefail
 {samtools_bin} markdup -@{duplicates_num_threads} --reference {genome_fasta} - {cram_path}
 
 # create index
+samtools index {cram_path}
+
+# stats
+samtools stats {cram_path} > {cram_stats_path}
 """
 
 
@@ -70,6 +78,12 @@ def _run_fastp_minimap_for_pair(
 
     cram_path = crams_dir / pair[0].with_suffix(".cram").name
 
+    cram_stats_path = crams_dir / pair[0].with_suffix(".cram.stats").name
+
+    logging.info(
+        "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
+    )
+
     script = PIPE_TEMPLATE.format(
         fastp_bin=FASTP_BIN,
         fastp_in1=fastp_in1,
@@ -87,6 +101,7 @@ def _run_fastp_minimap_for_pair(
         duplicates_num_threads=duplicates_num_threads,
         genome_fasta=genome_fasta,
         cram_path=cram_path,
+        cram_stats_path=cram_stats_path,
     )
     run_bash_script(script, project_dir=project_dir)
 
@@ -104,6 +119,15 @@ def run_fastp_minimap(
     project_dir = get_project_dir(project_dir)
     tmp_dir = project_dir / "tmp"
     tmp_dir.mkdir(exist_ok=True)
+
+    logging.basicConfig(
+        filename=get_log_path(project_dir),
+        filemode="a",
+        level=logging.INFO,
+        force=True,
+    )
+    logging.debug("hola")
+    print(get_log_path(project_dir))
 
     raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
     stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
@@ -134,7 +158,4 @@ def run_fastp_minimap(
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
             )
-
-
-# log
-# cram stats
+    input("hola")
