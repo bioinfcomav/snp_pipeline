@@ -5,6 +5,8 @@ from collections import defaultdict
 FASTQC_BIN = "fastqc"
 FASTQ_EXT = ".fastq.gz"
 FASTP_BIN = "fastp"
+MINIMAP2_BIN = "minimap2"
+SAMTOOLS_BIN = "samtools"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
@@ -114,6 +116,12 @@ def get_paired_and_unpaired_read_files_in_dir(dir_path: Path):
         else:
             files = ",".join([str(path_pairnum[0]) for path_pairnum in pair])
             raise ValueError(f"More than two paired read files: {files}")
+
+
+def get_crams_dir(project_dir) -> Path:
+    project_dir = get_project_dir(project_dir=project_dir)
+    path = project_dir / "crams"
+    return path
 
 
 def remove_file(path, not_exist_ok=False):

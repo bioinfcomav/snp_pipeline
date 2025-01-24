@@ -1,16 +1,13 @@
-from pathlib import Path
 import tempfile
 import shutil
 
+from .config import TEST_PROJECT1_DIR
 from reads_pipeline import (
     run_fastqc,
     collect_fastqc_stats,
     run_fastp,
     collect_fastp_stats,
 )
-
-TEST_DATA_DIR = Path(__file__).absolute().parent / "data"
-TEST_PROJECT1_DIR = TEST_DATA_DIR / "project1"
 
 
 def test_run_stats():

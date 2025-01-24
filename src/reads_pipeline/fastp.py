@@ -38,8 +38,8 @@ def _run_fastp_for_pair(
             remove_file(clean_path2, not_exist_ok=True)
         cmd.extend(["-I", str(pair[1]), "-O", str(clean_path2)])
 
-    html_report_path = stats_dir / pair[1].with_suffix(".html").name
-    json_report_path = stats_dir / pair[1].with_suffix(".json").name
+    html_report_path = stats_dir / pair[0].with_suffix(".html").name
+    json_report_path = stats_dir / pair[0].with_suffix(".json").name
     if re_run:
         remove_file(html_report_path, not_exist_ok=True)
         remove_file(json_report_path, not_exist_ok=True)
@@ -63,7 +63,7 @@ def _run_fastp_for_pair(
     run_cmd(cmd, project_dir=project_dir)
 
 
-def run_fastp(project_dir, min_len=30, deduplicate=True, threads=3, re_run=False):
+def run_fastp(project_dir, min_len=30, deduplicate=False, threads=3, re_run=False):
     raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
     clean_reads_parent_dir = get_clean_reads_parent_dir(project_dir)
     clean_reads_parent_dir.mkdir(exist_ok=True)
