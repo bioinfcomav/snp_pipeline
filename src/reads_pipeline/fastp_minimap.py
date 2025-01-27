@@ -274,15 +274,11 @@ def _parse_cram_stats(cram_stats_path):
 
 def collect_cram_stats(project_dir):
     project_dir = get_project_dir(project_dir)
-    crams_parent_dir = get_crams_dir(project_dir)
-    crams_dirs = [path for path in crams_parent_dir.iterdir() if path.is_dir()]
 
     results = []
-    for crams_dir in crams_dirs:
-        for cram_stats_path in filter(
-            lambda x: x.suffixes[-2:] == [".cram", ".stats"], crams_dir.iterdir()
-        ):
-            results.append({"dir": crams_dir.name} | _parse_cram_stats(cram_stats_path))
+    for cram_stats_path in _get_cram_stat_paths(project_dir):
+        crams_dir_name = cram_stats_path.parent.name
+        results.append({"dir": crams_dir_name} | _parse_cram_stats(cram_stats_path))
     results = pandas.DataFrame(results)
 
     stats_dir = get_crams_stats_dir(project_dir)
