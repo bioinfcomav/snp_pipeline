@@ -2,7 +2,10 @@ from pathlib import Path
 import logging
 import os
 
+import numpy
 import pandas
+import matplotlib.pyplot as plt
+
 
 from .paths import (
     get_project_dir,
@@ -80,9 +83,11 @@ def _run_fastp_minimap_for_pair(
     html_report_path = stats_dir / pair[0].with_suffix(".html").name
     json_report_path = stats_dir / pair[0].with_suffix(".json").name
 
-    cram_path = crams_dir / pair[0].with_suffix(".cram").name
+    cram_path = crams_dir / (pair[0].name.removesuffix(".fastq.gz") + ".cram")
 
-    cram_stats_path = crams_dir / pair[0].with_suffix(".cram.stats").name
+    cram_stats_path = crams_dir / (
+        pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
+    )
 
     logging.info(
         "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
@@ -229,3 +234,56 @@ def collect_cram_stats(project_dir):
     stats_dir.mkdir(exist_ok=True)
     stats_path = stats_dir / "cram_stats.xlsx"
     results.to_excel(stats_path, index=False)
+
+
+def _get_cram_stat_paths(project_dir):
+    project_dir = get_project_dir(project_dir)
+    crams_parent_dir = get_crams_dir(project_dir)
+    crams_dirs = [path for path in crams_parent_dir.iterdir() if path.is_dir()]
+
+    for crams_dir in crams_dirs:
+        for cram_stats_path in filter(
+            lambda x: x.suffixes[-2:] == [".cram", ".stats"], crams_dir.iterdir()
+        ):
+            yield cram_stats_path
+
+
+def _parse_cram_mapq(cram_stats_path):
+    with cram_stats_path.open("rt") as fhand:
+        mapq_num_reads = dict(
+            [
+                map(int, line.removeprefix("MAPQ\t").strip().split("\t"))
+                for line in fhand
+                if line.startswith("MAPQ\t")
+            ]
+        )
+        mapqs = numpy.arange(0, max(60, max(mapq_num_reads.keys()) + 1), dtype=int)
+        num_reads = [mapq_num_reads.get(mapq, 0) for mapq in mapqs]
+    return mapqs, num_reads
+
+
+def plot_mapq_distributions(project_dir):
+    parent_stats_dir = get_crams_stats_dir(project_dir)
+    parent_stats_dir.mkdir(exist_ok=True)
+
+    for cram_stats_path in _get_cram_stat_paths(project_dir):
+        dir_name = cram_stats_path.parent.name
+        stats_dir = parent_stats_dir / dir_name
+        stats_dir.mkdir(exist_ok=True)
+        fname = (
+            "mapq_distrib."
+            + str(cram_stats_path.name).removesuffix(".cram.stats")
+            + ".svg"
+        )
+
+        mapqs, num_reads = _parse_cram_mapq(cram_stats_path)
+
+        fig, axes = plt.subplots()
+        axes.bar(mapqs, num_reads)
+        axes.set_xlim((0, max(axes.get_xlim()[1], 60)))
+        axes.set_xlabel("MAPQ")
+        axes.set_ylabel("Num. reads (non-duplicated)")
+
+        plot_path = stats_dir / fname
+        fig.savefig(plot_path)
+        plt.close(fig)
