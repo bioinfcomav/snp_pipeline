@@ -18,6 +18,7 @@ from .paths import (
     FASTP_BIN,
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
+    remove_file,
 )
 from .run_cmd import run_bash_script
 
@@ -40,16 +41,7 @@ set -o pipefail
 # This adds mate cigar (MC) and mate score tags (ms) which will be used later by samtools markdup proper
 {samtools_bin} fixmate -u -m - - | \
 
-# When estimating the total number of concurrent threads to allocate,
-# consider that the sort step is a crunch point that separates the steps before it from the step afterwards.
-# The mapping, fixmate and partial sort to temporary file steps will operate in parallel.
-# Once complete, the sort merge (from temporary files) and markdup steps will then run in parallel.
-# Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
-# It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
-# The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
-{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} - | \
-# The main core of marking duplicates may now be ran on the position-sorted file
-{samtools_bin} markdup -@{duplicates_num_threads} --reference {genome_fasta} - {cram_path}
+{deduplicate_and_sort_lines}
 
 # create index
 samtools index {cram_path}
@@ -57,6 +49,27 @@ samtools index {cram_path}
 # stats
 samtools stats {cram_path} > {cram_stats_path}
 """
+
+SORT_AND_DEDUPLIATE_LINES = """# When estimating the total number of concurrent threads to allocate,
+# consider that the sort step is a crunch point that separates the steps before it from the step afterwards.
+# The mapping, fixmate and partial sort to temporary file steps will operate in parallel.
+# Once complete, the sort merge (from temporary files) and markdup steps will then run in parallel.
+# Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
+# It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
+# The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
+{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} - | \
+
+# The main core of marking duplicates may now be ran on the position-sorted file
+{samtools_bin} markdup -@{duplicates_num_threads} --reference {genome_fasta} - {cram_path}"""
+
+SORT_LINES = """# When estimating the total number of concurrent threads to allocate,
+# consider that the sort step is a crunch point that separates the steps before it from the step afterwards.
+# The mapping, fixmate and partial sort to temporary file steps will operate in parallel.
+# Once complete, the sort merge (from temporary files) and markdup steps will then run in parallel.
+# Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
+# It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
+# The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
+{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} --reference {genome_fasta} - -o {cram_path}"""
 
 
 def _run_fastp_minimap_for_pair(
@@ -72,6 +85,8 @@ def _run_fastp_minimap_for_pair(
     tmp_dir: Path,
     duplicates_num_threads: int,
     genome_fasta: Path,
+    deduplicate: bool,
+    re_run: bool,
 ):
     if len(pair) == 2:
         fastp_in1 = f"--in1 {pair[0]}"
@@ -89,9 +104,40 @@ def _run_fastp_minimap_for_pair(
         pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
     )
 
+    if re_run:
+        remove_file(cram_path, not_exist_ok=True)
+        remove_file(cram_stats_path, not_exist_ok=True)
+    else:
+        if cram_path.exists() and cram_stats_path.exists():
+            return
+        else:
+            remove_file(cram_path, not_exist_ok=True)
+            remove_file(cram_stats_path, not_exist_ok=True)
+            logging.warning(
+                f"One mapped file or stat was missing the existing file was removed and the analysis was re done: {cram_path} or {cram_stats_path}"
+            )
+
     logging.info(
         "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
     )
+
+    if deduplicate:
+        deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
+            samtools_bin=SAMTOOLS_BIN,
+            duplicates_num_threads=duplicates_num_threads,
+            genome_fasta=genome_fasta,
+            cram_path=cram_path,
+            tmp_dir=tmp_dir,
+            sort_num_threads=sort_num_threads,
+        )
+    else:
+        deduplicate_line = SORT_LINES.format(
+            samtools_bin=SAMTOOLS_BIN,
+            genome_fasta=genome_fasta,
+            cram_path=cram_path,
+            tmp_dir=tmp_dir,
+            sort_num_threads=sort_num_threads,
+        )
 
     script = PIPE_TEMPLATE.format(
         fastp_bin=FASTP_BIN,
@@ -107,23 +153,30 @@ def _run_fastp_minimap_for_pair(
         samtools_bin=SAMTOOLS_BIN,
         sort_num_threads=sort_num_threads,
         tmp_dir=tmp_dir,
-        duplicates_num_threads=duplicates_num_threads,
         genome_fasta=genome_fasta,
         cram_path=cram_path,
         cram_stats_path=cram_stats_path,
+        deduplicate_and_sort_lines=deduplicate_line,
     )
-    run_bash_script(script, project_dir=project_dir)
+    try:
+        run_bash_script(script, project_dir=project_dir)
+    except RuntimeError:
+        remove_file(cram_path, not_exist_ok=True)
+        remove_file(cram_stats_path, not_exist_ok=True)
+        raise
 
 
 def run_fastp_minimap(
     project_dir: Path,
     minimap_index: Path,
     genome_fasta: Path,
+    deduplicate: bool,
     min_read_len=30,
     fastp_num_threads=3,
     minimap_num_threads=3,
     sort_num_threads=8,
     duplicates_num_threads=8,
+    re_run=False,
 ):
     project_dir = get_project_dir(project_dir)
     tmp_dir = project_dir / "tmp"
@@ -164,6 +217,8 @@ def run_fastp_minimap(
                 tmp_dir=tmp_dir,
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
+                deduplicate=deduplicate,
+                re_run=re_run,
             )
 
 
