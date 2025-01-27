@@ -124,6 +124,10 @@ def get_crams_dir(project_dir) -> Path:
     return path
 
 
+def get_crams_stats_dir(project_dir) -> Path:
+    return get_crams_dir(project_dir) / "stats"
+
+
 def remove_file(path, not_exist_ok=False):
     if not not_exist_ok and not path.exists():
         raise ValueError(f"Path can't be removed because it doesn't exist: {path}")

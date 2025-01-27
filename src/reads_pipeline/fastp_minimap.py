@@ -1,5 +1,8 @@
 from pathlib import Path
 import logging
+import os
+
+import pandas
 
 from .paths import (
     get_project_dir,
@@ -8,6 +11,7 @@ from .paths import (
     get_reads_stats_fastp_parent_dir,
     get_paired_and_unpaired_read_files_in_dir,
     get_crams_dir,
+    get_crams_stats_dir,
     FASTP_BIN,
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
@@ -126,8 +130,6 @@ def run_fastp_minimap(
         level=logging.INFO,
         force=True,
     )
-    logging.debug("hola")
-    print(get_log_path(project_dir))
 
     raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
     stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
@@ -158,4 +160,72 @@ def run_fastp_minimap(
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
             )
-    input("hola")
+
+
+def _parse_cram_stats(cram_stats_path):
+    with cram_stats_path.open("rt") as fhand:
+        lines = list(fhand)
+
+    file_line = lines[2]
+    if not file_line.startswith("# The command line was"):
+        raise RuntimeError(
+            f"Error reading the command file line in cram stats: {cram_stats_path}"
+        )
+    file_name = file_line.split(os.sep)[-1]
+    result = {"file_name": file_name}
+
+    summary = dict(
+        [
+            line.strip().split("\t", 1)[1].replace(":", "").split("\t")[:2]
+            for line in lines
+            if line.startswith("SN")
+        ]
+    )
+    result["total sequences"] = int(summary["raw total sequences"])
+    result["filtered sequences"] = int(summary["filtered sequences"])
+    result["sequences"] = int(summary["sequences"])
+    result["1st fragments"] = int(summary["1st fragments"])
+    result["reads mapped"] = int(summary["reads mapped"])
+    result[r"% reads mapped"] = result["reads mapped"] / result["sequences"] * 100.0
+    result["reads mapped and paired"] = int(summary["reads mapped and paired"])
+    result[r"% reads mapped and paired"] = (
+        result["reads mapped and paired"] / result["sequences"] * 100.0
+    )
+    result["reads unmapped"] = int(summary["reads unmapped"])
+    result[r"% reads unmapped"] = result["reads unmapped"] / result["sequences"] * 100.0
+    result["reads duplicated"] = int(summary["reads duplicated"])
+    result[r"% reads duplicated"] = (
+        result["reads duplicated"] / result["sequences"] * 100.0
+    )
+
+    result["reads properly paired"] = int(summary["reads properly paired"])
+    result["reads paired"] = int(summary["reads paired"])
+    result[r"% reads properly paired"] = (
+        result["reads properly paired"] / result["reads paired"] * 100.0
+    )
+    result["inward oriented pairs"] = int(summary["inward oriented pairs"])
+    result["outward oriented pairs"] = int(summary["outward oriented pairs"])
+    result["insert size average"] = float(summary["insert size average"])
+
+    result["reads average length"] = float(summary["average length"])
+    result["reads average quality"] = float(summary["average quality"])
+    return result
+
+
+def collect_cram_stats(project_dir):
+    project_dir = get_project_dir(project_dir)
+    crams_parent_dir = get_crams_dir(project_dir)
+    crams_dirs = [path for path in crams_parent_dir.iterdir() if path.is_dir()]
+
+    results = []
+    for crams_dir in crams_dirs:
+        for cram_stats_path in filter(
+            lambda x: x.suffixes[-2:] == [".cram", ".stats"], crams_dir.iterdir()
+        ):
+            results.append({"dir": crams_dir.name} | _parse_cram_stats(cram_stats_path))
+    results = pandas.DataFrame(results)
+
+    stats_dir = get_crams_stats_dir(project_dir)
+    stats_dir.mkdir(exist_ok=True)
+    stats_path = stats_dir / "cram_stats.xlsx"
+    results.to_excel(stats_path, index=False)

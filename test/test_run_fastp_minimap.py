@@ -6,7 +6,7 @@ from .config import (
     MINIMAP_PROJECT2_TOMATO_INDEX,
     MINIMAP_PROJECT2_TOMATO_FASTA,
 )
-from reads_pipeline import run_fastp_minimap
+from reads_pipeline import run_fastp_minimap, collect_cram_stats
 
 
 def test_run_pipeline():
@@ -17,3 +17,5 @@ def test_run_pipeline():
             minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
         )
+        stats = collect_cram_stats(project_dir)
+        assert "file_name" in stats.columns
