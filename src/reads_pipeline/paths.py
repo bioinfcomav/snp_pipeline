@@ -17,6 +17,11 @@ def get_project_dir(project_dir: None | str | Path) -> Path:
         return Path(os.getcwd())
 
 
+def get_read_group_info_xls(project_dir) -> Path:
+    project_dir = get_project_dir(project_dir)
+    return project_dir / "reads.xls"
+
+
 def get_reads_dir(project_dir, check_exists=True) -> Path:
     project_dir = get_project_dir(project_dir=project_dir)
     path = project_dir / "reads"

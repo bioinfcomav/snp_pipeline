@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 from .paths import (
     get_project_dir,
+    get_read_group_info_xls,
     get_log_path,
     get_raw_reads_parent_dir,
     get_reads_stats_fastp_parent_dir,
@@ -22,6 +23,7 @@ from .paths import (
     remove_file,
 )
 from .run_cmd import run_bash_script
+from .read_group import get_read_group_info, create_minimap_rg_str
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,7 @@ set -o pipefail
 {fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis {fastp_gobal_trim} --thread {fastp_num_threads} | \\
 
 # minimap2
-{minimap2_bin} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
+{minimap2_bin} -R {rg_str} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
 
 # trim_quals it reduces the qualities from the read edges
 {trim_quals_bin} | \\
@@ -104,7 +106,24 @@ def _run_fastp_minimap_for_pair(
     genome_fasta: Path,
     deduplicate: bool,
     re_run: bool,
+    read_groups_info: dict,
 ):
+    logging.basicConfig(
+        filename=get_log_path(project_dir),
+        filemode="a",
+        level=logging.INFO,
+        force=True,
+    )
+    read_id = pair[0].name.split(".")[0]
+    excel_file = get_read_group_info_xls(project_dir)
+    if read_id not in read_groups_info:
+        msg = f"The read group {read_id} does not have read group info in the excel file: {excel_file}"
+        logging.error(msg)
+        raise ValueError(msg)
+    rg_str = create_minimap_rg_str(
+        read_id, read_groups_info[read_id], project_dir, excel_file
+    )
+
     if len(pair) == 2:
         fastp_in1 = f"--in1 {pair[0]}"
         fastp_in2 = f"--in2 {pair[1]}"
@@ -177,6 +196,7 @@ def _run_fastp_minimap_for_pair(
         minimap2_bin=MINIMAP2_BIN,
         minimap_index=minimap_index,
         minimap_num_threads=minimap_num_threads,
+        rg_str=rg_str,
         samtools_bin=SAMTOOLS_BIN,
         trim_quals_bin=TRIM_QUALS_BIN,
         sort_num_threads=sort_num_threads,
@@ -223,6 +243,8 @@ def run_fastp_minimap(
         force=True,
     )
 
+    read_groups_info = get_read_group_info(project_dir)
+
     raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
     stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
     stats_parent_dir.mkdir(exist_ok=True, parents=True)
@@ -258,6 +280,7 @@ def run_fastp_minimap(
                 genome_fasta=genome_fasta,
                 deduplicate=deduplicate,
                 re_run=re_run,
+                read_groups_info=read_groups_info,
             )
 
 
