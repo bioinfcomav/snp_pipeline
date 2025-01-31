@@ -4,4 +4,5 @@ from .fastp_minimap import (
     run_fastp_minimap,
     collect_cram_stats,
     plot_mapq_distributions,
+    plot_coverage_distributions,
 )

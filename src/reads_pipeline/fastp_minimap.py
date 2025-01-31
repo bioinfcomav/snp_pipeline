@@ -313,6 +313,42 @@ def _parse_cram_mapq(cram_stats_path):
     return mapqs, num_reads
 
 
+def _process_cov(cov_range: str):
+    if cov_range[0] != "[" or cov_range[-1] != "]":
+        raise ValueError(
+            f"The coverage range is malformed, expected: [int-int]: {cov_range}"
+        )
+    range = tuple(map(int, cov_range[1:-1].split("-")))
+    if range[0] == range[1]:
+        range = range[0]
+    return range
+
+
+def _parse_cram_cov(cram_stats_path):
+    with cram_stats_path.open("rt") as fhand:
+        cov_num_readss = [
+            line.strip().removeprefix("COV\t").split("\t")
+            for line in fhand
+            if line.startswith("COV")
+        ]
+        cov_num_readss = [
+            (_process_cov(cov_num_reads[0]), int(cov_num_reads[2]))
+            for cov_num_reads in cov_num_readss
+        ]
+        covs, num_reads = zip(*cov_num_readss)
+        all_ranges_are_int = all([isinstance(cov, int) for cov in covs])
+
+        if all_ranges_are_int:
+            covs_num_readss = dict(zip(covs, num_reads))
+            new_covs = list(range(min(covs), max(covs)))
+            new_num_reads = []
+            for cov in new_covs:
+                new_num_reads.append(covs_num_readss.get(cov, 0))
+            covs, num_reads = new_covs, new_num_reads
+
+        return covs, num_reads
+
+
 def plot_mapq_distributions(project_dir):
     parent_stats_dir = get_crams_stats_dir(project_dir)
     parent_stats_dir.mkdir(exist_ok=True)
@@ -333,6 +369,32 @@ def plot_mapq_distributions(project_dir):
         axes.bar(mapqs, num_reads)
         axes.set_xlim((0, max(axes.get_xlim()[1], 60)))
         axes.set_xlabel("MAPQ")
+        axes.set_ylabel("Num. reads (non-duplicated)")
+
+        plot_path = stats_dir / fname
+        fig.savefig(plot_path)
+        plt.close(fig)
+
+
+def plot_coverage_distributions(project_dir):
+    parent_stats_dir = get_crams_stats_dir(project_dir)
+    parent_stats_dir.mkdir(exist_ok=True)
+
+    for cram_stats_path in _get_cram_stat_paths(project_dir):
+        dir_name = cram_stats_path.parent.name
+        stats_dir = parent_stats_dir / dir_name
+        stats_dir.mkdir(exist_ok=True)
+        fname = (
+            "cov_distrib."
+            + str(cram_stats_path.name).removesuffix(".cram.stats")
+            + ".svg"
+        )
+        covs, num_reads = _parse_cram_cov(cram_stats_path)
+        if not all([isinstance(cov, int) for cov in covs]):
+            covs = list(map(str, covs))
+        fig, axes = plt.subplots()
+        axes.bar(covs, num_reads)
+        axes.set_xlabel("Coverage")
         axes.set_ylabel("Num. reads (non-duplicated)")
 
         plot_path = stats_dir / fname

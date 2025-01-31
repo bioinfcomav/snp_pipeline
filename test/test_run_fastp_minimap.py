@@ -10,6 +10,7 @@ from reads_pipeline import (
     run_fastp_minimap,
     collect_cram_stats,
     plot_mapq_distributions,
+    plot_coverage_distributions,
 )
 
 
@@ -22,9 +23,9 @@ def test_run_pipeline():
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
             deduplicate=True,
         )
+        plot_coverage_distributions(project_dir)
         collect_cram_stats(project_dir)
         plot_mapq_distributions(project_dir)
-        input("hola")
 
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT2_DIR, project_dir, dirs_exist_ok=True)
