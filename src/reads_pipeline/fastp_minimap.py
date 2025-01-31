@@ -34,7 +34,7 @@ set -e
 set -o pipefail
 
 # fastp
-{fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis --thread {fastp_num_threads} | \\
+{fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis {fastp_gobal_trim} --thread {fastp_num_threads} | \\
 
 # minimap2
 {minimap2_bin} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
@@ -91,6 +91,10 @@ def _run_fastp_minimap_for_pair(
     crams_dir: Path,
     min_read_len: int,
     fastp_num_threads: int,
+    fastp_trim_front1: int,
+    fastp_trim_tail1: int,
+    fastp_trim_front2: int,
+    fastp_trim_tail2: int,
     minimap_index: Path,
     minimap_num_threads: int,
     sort_num_threads: int,
@@ -107,6 +111,15 @@ def _run_fastp_minimap_for_pair(
     elif len(pair) == 1:
         fastp_in1 = f"--in1 {pair[0]}"
         fastp_in2 = ""
+    fastp_gobal_trim = ""
+    if fastp_trim_front1:
+        fastp_gobal_trim += f"--trim_front1={fastp_trim_front1} "
+    if fastp_trim_front2:
+        fastp_gobal_trim += f"--trim_front2={fastp_trim_front2} "
+    if fastp_trim_tail1:
+        fastp_gobal_trim += f"--trim_tail1={fastp_trim_tail1} "
+    if fastp_trim_tail2:
+        fastp_gobal_trim += f"--trim_tail2={fastp_trim_tail2} "
 
     html_report_path = stats_dir / pair[0].with_suffix(".html").name
     json_report_path = stats_dir / pair[0].with_suffix(".json").name
@@ -160,6 +173,7 @@ def _run_fastp_minimap_for_pair(
         fastp_json_report_path=json_report_path,
         min_read_len=min_read_len,
         fastp_num_threads=fastp_num_threads,
+        fastp_gobal_trim=fastp_gobal_trim,
         minimap2_bin=MINIMAP2_BIN,
         minimap_index=minimap_index,
         minimap_num_threads=minimap_num_threads,
@@ -188,6 +202,10 @@ def run_fastp_minimap(
     deduplicate: bool,
     min_read_len=30,
     fastp_num_threads=3,
+    fastp_trim_front1=0,
+    fastp_trim_tail1=0,
+    fastp_trim_front2=0,
+    fastp_trim_tail2=0,
     minimap_num_threads=3,
     sort_num_threads=8,
     duplicates_num_threads=8,
@@ -227,6 +245,10 @@ def run_fastp_minimap(
                 crams_dir=crams_dir,
                 min_read_len=min_read_len,
                 fastp_num_threads=fastp_num_threads,
+                fastp_trim_front1=fastp_trim_front1,
+                fastp_trim_tail1=fastp_trim_tail1,
+                fastp_trim_front2=fastp_trim_front2,
+                fastp_trim_tail2=fastp_trim_tail2,
                 minimap_index=minimap_index,
                 minimap_num_threads=minimap_num_threads,
                 sort_num_threads=sort_num_threads,

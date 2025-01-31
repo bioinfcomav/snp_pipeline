@@ -22,6 +22,10 @@ def test_run_pipeline():
             minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
             deduplicate=True,
+            fastp_trim_front1=1,
+            fastp_trim_front2=1,
+            fastp_trim_tail1=1,
+            fastp_trim_tail2=2,
         )
         plot_coverage_distributions(project_dir)
         collect_cram_stats(project_dir)
