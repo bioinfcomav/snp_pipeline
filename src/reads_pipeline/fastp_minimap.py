@@ -33,15 +33,23 @@ set -e
 set -o pipefail
 
 # fastp
-{fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis --thread {fastp_num_threads} | \
+{fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis --thread {fastp_num_threads} | \\
 
 # minimap2
-{minimap2_bin} -t {minimap_num_threads} -a -x sr {minimap_index} - | \
+{minimap2_bin} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
 
 # This adds mate cigar (MC) and mate score tags (ms) which will be used later by samtools markdup proper
-{samtools_bin} fixmate -u -m - - | \
+{samtools_bin} fixmate -u -m - - | \\
 
 {deduplicate_and_sort_lines}
+
+# calmd
+# Calmd works best on position-sorted input files, as with these it can stream through the reference sequence
+# and so doesn't have to store much reference data at any one time
+# -A when used jointly with -r this option overwrites the original base quality
+{samtools_bin} calmd -Ar -@{calmd_num_threads} - {genome_fasta} | \\
+
+samtools view --reference {genome_fasta} -o {cram_path} - 
 
 # create index
 samtools index {cram_path}
@@ -57,10 +65,10 @@ SORT_AND_DEDUPLIATE_LINES = """# When estimating the total number of concurrent 
 # Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
 # It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
 # The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
-{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} - | \
+{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} - | \\
 
 # The main core of marking duplicates may now be ran on the position-sorted file
-{samtools_bin} markdup -@{duplicates_num_threads} --reference {genome_fasta} - {cram_path}"""
+{samtools_bin} markdup -@{duplicates_num_threads} --reference {genome_fasta} - - | \\"""
 
 SORT_LINES = """# When estimating the total number of concurrent threads to allocate,
 # consider that the sort step is a crunch point that separates the steps before it from the step afterwards.
@@ -69,7 +77,7 @@ SORT_LINES = """# When estimating the total number of concurrent threads to allo
 # Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
 # It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
 # The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
-{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} --reference {genome_fasta} - -o {cram_path}"""
+{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} --reference {genome_fasta} - | \\"""
 
 
 def _run_fastp_minimap_for_pair(
@@ -82,6 +90,7 @@ def _run_fastp_minimap_for_pair(
     minimap_index: Path,
     minimap_num_threads: int,
     sort_num_threads: int,
+    calmd_num_threads: int,
     tmp_dir: Path,
     duplicates_num_threads: int,
     genome_fasta: Path,
@@ -157,6 +166,7 @@ def _run_fastp_minimap_for_pair(
         cram_path=cram_path,
         cram_stats_path=cram_stats_path,
         deduplicate_and_sort_lines=deduplicate_line,
+        calmd_num_threads=calmd_num_threads,
     )
     try:
         run_bash_script(script, project_dir=project_dir)
@@ -176,6 +186,7 @@ def run_fastp_minimap(
     minimap_num_threads=3,
     sort_num_threads=8,
     duplicates_num_threads=8,
+    calmd_num_threads=2,
     re_run=False,
 ):
     project_dir = get_project_dir(project_dir)
@@ -214,6 +225,7 @@ def run_fastp_minimap(
                 minimap_index=minimap_index,
                 minimap_num_threads=minimap_num_threads,
                 sort_num_threads=sort_num_threads,
+                calmd_num_threads=calmd_num_threads,
                 tmp_dir=tmp_dir,
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
