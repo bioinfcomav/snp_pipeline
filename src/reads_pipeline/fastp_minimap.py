@@ -18,6 +18,7 @@ from .paths import (
     FASTP_BIN,
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
+    TRIM_QUALS_BIN,
     remove_file,
 )
 from .run_cmd import run_bash_script
@@ -37,6 +38,9 @@ set -o pipefail
 
 # minimap2
 {minimap2_bin} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
+
+# trim_quals it reduces the qualities from the read edges
+{trim_quals_bin} | \\
 
 # This adds mate cigar (MC) and mate score tags (ms) which will be used later by samtools markdup proper
 {samtools_bin} fixmate -u -m - - | \\
@@ -160,6 +164,7 @@ def _run_fastp_minimap_for_pair(
         minimap_index=minimap_index,
         minimap_num_threads=minimap_num_threads,
         samtools_bin=SAMTOOLS_BIN,
+        trim_quals_bin=TRIM_QUALS_BIN,
         sort_num_threads=sort_num_threads,
         tmp_dir=tmp_dir,
         genome_fasta=genome_fasta,
