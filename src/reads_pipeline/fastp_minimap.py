@@ -269,6 +269,13 @@ def _parse_cram_stats(cram_stats_path):
 
     result["reads average length"] = float(summary["average length"])
     result["reads average quality"] = float(summary["average quality"])
+
+    mapqs, num_reads = _parse_cram_mapq(cram_stats_path)
+    for mapq in (10, 20, 30):
+        idx10 = mapqs >= 10
+        result[f"%reads above {mapq} mapq"] = (
+            numpy.sum(num_reads[idx10]) / numpy.sum(num_reads)
+        ) * 100.0
     return result
 
 
@@ -310,7 +317,7 @@ def _parse_cram_mapq(cram_stats_path):
         )
         mapqs = numpy.arange(0, max(60, max(mapq_num_reads.keys()) + 1), dtype=int)
         num_reads = [mapq_num_reads.get(mapq, 0) for mapq in mapqs]
-    return mapqs, num_reads
+    return mapqs, numpy.array(num_reads)
 
 
 def _process_cov(cov_range: str):
