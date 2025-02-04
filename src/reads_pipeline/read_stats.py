@@ -90,11 +90,6 @@ def _parse_fastqc_data(file_content: str):
         [float(line.split("\t")[1]) for line in modules[1].splitlines()[3:12]]
     )
     result["mean_qual_first_9_nucleotides"] = mean_qual_first_9_nucleotides
-
-    quals, num_reads = zip(
-        *[tuple(map(float, line.split("\t"))) for line in modules[2].splitlines()[3:]]
-    )
-    result["reads_mean_qual"] = numpy.average(quals, weights=num_reads)
     return result
 
 
@@ -127,4 +122,6 @@ def collect_fastqc_stats(project_dir):
             for zip_path in fastqc_zip_paths:
                 stats.append(_parse_fastqc_zip_file(zip_path))
         result[read_type] = pandas.DataFrame(stats)
+        excel_path = stats_dir / "fastqc_stats.xlsx"
+        result[read_type].to_excel(excel_path, index=False)
     return result
