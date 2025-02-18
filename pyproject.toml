@@ -1,5 +1,5 @@
 [project]
-name = "snp-pipeline"
+name = "reads-pipeline"
 version = "0.1.0"
 description = "Pipeline to clean and map reads"
 readme = "README.md"
@@ -11,6 +11,10 @@ dependencies = [
     "pandas>=2.2.3",
     "xlrd>=2.0.1",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
