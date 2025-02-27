@@ -227,6 +227,7 @@ def _run_fastp_minimap_for_pair(
         remove_file(cram_path, not_exist_ok=True)
         remove_file(cram_stats_path, not_exist_ok=True)
         raise
+    return {"cram_path": cram_path}
 
 
 def run_fastp_minimap(
@@ -268,6 +269,7 @@ def run_fastp_minimap(
     crams_parent_dir = get_crams_dir(project_dir)
     crams_parent_dir.mkdir(exist_ok=True, parents=True)
 
+    cram_paths = []
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
         stats_dir = stats_parent_dir / dir_name
@@ -276,7 +278,7 @@ def run_fastp_minimap(
         crams_dir.mkdir(exist_ok=True)
 
         for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
-            _run_fastp_minimap_for_pair(
+            res = _run_fastp_minimap_for_pair(
                 pair,
                 project_dir=project_dir,
                 stats_dir=stats_dir,
@@ -300,6 +302,8 @@ def run_fastp_minimap(
                 trim_quals_num_bases=trim_quals_num_bases,
                 trim_quals_qual_reduction=trim_quals_qual_reduction,
             )
+            cram_paths.append(res["cram_path"])
+    return {"cram_paths": cram_paths}
 
 
 def _parse_cram_stats(cram_stats_path):
