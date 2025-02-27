@@ -36,7 +36,7 @@ def create_genome_reference(
 
 def do_sample_snv_calling_basic_germline(
     genome_fasta: Path,
-    bam: Path,
+    bams: list[Path],
     out_vcf: Path,
     project_dir,
     min_mapq: int = 10,
@@ -55,7 +55,8 @@ def do_sample_snv_calling_basic_germline(
         str(tmp_dir),
     ]
     cmd.extend(["-R", str(genome_fasta)])
-    cmd.extend(["-I", str(bam)])
+    for bam in bams:
+        cmd.extend(["-I", str(bam)])
     cmd.extend(["-O", str(out_vcf)])
     cmd.extend(["--mapping-quality-threshold-for-genotyping", str(min_mapq)])
     cmd.extend(["-ERC", "BP_RESOLUTION"])
@@ -63,6 +64,15 @@ def do_sample_snv_calling_basic_germline(
 
 
 def create_db_with_sample_snv_calls():
+    """
+    gatk GenomicsDBImport \
+    --genomicsdb-workspace-path /path/to/genomicsdb \
+    --batch-size 50 \
+    --sample-name-map /path/to/samples.map \
+    --reader-threads 4
+    --bypass-feature-reader
+    """
+    # check that there is only one VCF per sample because having several would degrade accuracy
     pass
 
 
