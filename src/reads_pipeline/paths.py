@@ -131,8 +131,24 @@ def get_crams_dir(project_dir) -> Path:
     return path
 
 
+def get_snv_dir(project_dir) -> Path:
+    project_dir = get_project_dir(project_dir=project_dir)
+    path = project_dir / "snv_calling"
+    return path
+
+
+def get_vcfs_for_bams_dir(project_dir) -> Path:
+    snv_dir = get_snv_dir(project_dir)
+    path = snv_dir / "vcfs_for_bams"
+    return path
+
+
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
+
+
+def get_tmp_dir(project_dir) -> Path:
+    return get_project_dir(project_dir) / "tmp"
 
 
 def remove_file(path, not_exist_ok=False):

@@ -1,9 +1,16 @@
 import tempfile
 import shutil
 from pathlib import Path
+from subprocess import run
 
 from .config import TEST_PROJECT2_DIR
-from reads_pipeline.gatk import create_genome_reference
+from reads_pipeline.gatk import (
+    create_genome_reference,
+    do_sample_snv_calling_basic_germline,
+)
+from reads_pipeline.fastp_minimap import run_fastp_minimap
+
+from reads_pipeline.paths import MINIMAP2_BIN, get_vcfs_for_bams_dir
 
 
 def test_create_genome_reference():
@@ -14,4 +21,28 @@ def test_create_genome_reference():
         snv_calling_dir = project_dir_path / "snv_calling"
         snv_calling_dir.mkdir()
 
-        create_genome_reference(genome_fasta, snv_calling_dir, project_dir_path)
+        res = create_genome_reference(genome_fasta, snv_calling_dir, project_dir_path)
+        genome_reference_path = res["genome_path"]
+
+        minimap_index = genome_reference_path.with_suffix(".mmi")
+        cmd = [MINIMAP2_BIN, "-d", str(minimap_index), str(genome_reference_path)]
+        run(cmd, capture_output=True, check=True)
+
+        res = run_fastp_minimap(
+            project_dir=project_dir_path,
+            minimap_index=minimap_index,
+            genome_fasta=genome_reference_path,
+            deduplicate=False,
+        )
+        cram_paths = res["cram_paths"]
+
+        vcf_bams_dir = get_vcfs_for_bams_dir(project_dir)
+        vcf_bams_dir.mkdir(parents=True)
+        for cram_path in cram_paths:
+            vcf_path = vcf_bams_dir / cram_path.with_suffix(".vcf.gz").name
+            do_sample_snv_calling_basic_germline(
+                genome_reference_path,
+                cram_path,
+                out_vcf=vcf_path,
+                project_dir=project_dir,
+            )
