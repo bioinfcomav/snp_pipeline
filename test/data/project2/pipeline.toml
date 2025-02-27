@@ -8,6 +8,10 @@ genome_path = "tomato_SL12_400000_700000.fasta"
 index_path = "tomato_SL12_400000_700000.fasta.mmi"
 #num_threads = 20
 
+[trim_quals]
+#num_bases = 3
+#qual_reduction = 20
+
 [samtools]
 deduplicate = true
 #sort_num_threads = 10

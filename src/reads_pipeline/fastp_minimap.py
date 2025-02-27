@@ -42,7 +42,7 @@ set -o pipefail
 {minimap2_bin} -R {rg_str} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
 
 # trim_quals it reduces the qualities from the read edges
-{trim_quals_bin} | \\
+{trim_quals_line}
 
 # This adds mate cigar (MC) and mate score tags (ms) which will be used later by samtools markdup proper
 {samtools_bin} fixmate -u -m - - | \\
@@ -85,6 +85,10 @@ SORT_LINES = """# When estimating the total number of concurrent threads to allo
 # The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
 {samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} --reference {genome_fasta} - | \\"""
 
+TRIM_QUALS_LINE = (
+    "trim_quals --num-bases {num_bases} --qual-reduction {qual_reduction} - - | \\"
+)
+
 
 def _run_fastp_minimap_for_pair(
     pair: tuple[Path],
@@ -107,6 +111,8 @@ def _run_fastp_minimap_for_pair(
     deduplicate: bool,
     re_run: bool,
     read_groups_info: dict,
+    trim_quals_num_bases: int,
+    trim_quals_qual_reduction: int,
 ):
     logging.basicConfig(
         filename=get_log_path(project_dir),
@@ -184,6 +190,13 @@ def _run_fastp_minimap_for_pair(
             sort_num_threads=sort_num_threads,
         )
 
+    if trim_quals_num_bases > 0:
+        trim_quals_line = TRIM_QUALS_LINE.format(
+            num_bases=trim_quals_num_bases, qual_reduction=trim_quals_qual_reduction
+        )
+    else:
+        trim_quals_line = ""
+
     script = PIPE_TEMPLATE.format(
         fastp_bin=FASTP_BIN,
         fastp_in1=fastp_in1,
@@ -206,6 +219,7 @@ def _run_fastp_minimap_for_pair(
         cram_stats_path=cram_stats_path,
         deduplicate_and_sort_lines=deduplicate_line,
         calmd_num_threads=calmd_num_threads,
+        trim_quals_line=trim_quals_line,
     )
     try:
         run_bash_script(script, project_dir=project_dir)
@@ -230,6 +244,8 @@ def run_fastp_minimap(
     sort_num_threads=8,
     duplicates_num_threads=8,
     calmd_num_threads=2,
+    trim_quals_num_bases=4,
+    trim_quals_qual_reduction=20,
     re_run=False,
 ):
     project_dir = get_project_dir(project_dir)
@@ -281,6 +297,8 @@ def run_fastp_minimap(
                 deduplicate=deduplicate,
                 re_run=re_run,
                 read_groups_info=read_groups_info,
+                trim_quals_num_bases=trim_quals_num_bases,
+                trim_quals_qual_reduction=trim_quals_qual_reduction,
             )
 
 

@@ -15,6 +15,7 @@ DEFAULTS = {
         "trim_tail1": 0,
         "trim_tail2": 0,
     },
+    "trim_quals": {"num_bases": 3, "qual_reduction": 20},
     "minimap": {"num_threads": 3},
     "samtools": {
         "sort_num_threads": 8,
