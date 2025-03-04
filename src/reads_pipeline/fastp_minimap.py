@@ -302,7 +302,8 @@ def run_fastp_minimap(
                 trim_quals_num_bases=trim_quals_num_bases,
                 trim_quals_qual_reduction=trim_quals_qual_reduction,
             )
-            cram_paths.append(res["cram_path"])
+            if res:
+                cram_paths.append(res["cram_path"])
     return {"cram_paths": cram_paths}
 
 
