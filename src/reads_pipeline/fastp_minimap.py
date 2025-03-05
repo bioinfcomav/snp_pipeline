@@ -20,9 +20,11 @@ from .paths import (
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
     TRIM_QUALS_BIN,
+    FILE_BIN,
+    MD5BIN,
     remove_file,
 )
-from .run_cmd import run_bash_script
+from .run_cmd import run_bash_script, run_cmd
 from .read_group import get_read_group_info, create_minimap_rg_str
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,8 @@ set -e
 # Enable pipefail to make the entire pipeline fail if any part of the pipe fails
 #  If any command in a pipeline fails, that return code will be used as t   he return code of the whole pipeline
 set -o pipefail
+
+export REF_PATH={ref_path_dir}
 
 # fastp
 {fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis {fastp_gobal_trim} --thread {fastp_num_threads} | \\
@@ -113,6 +117,7 @@ def _run_fastp_minimap_for_pair(
     read_groups_info: dict,
     trim_quals_num_bases: int,
     trim_quals_qual_reduction: int,
+    ref_path_dir: Path,
 ):
     logging.basicConfig(
         filename=get_log_path(project_dir),
@@ -220,7 +225,9 @@ def _run_fastp_minimap_for_pair(
         deduplicate_and_sort_lines=deduplicate_line,
         calmd_num_threads=calmd_num_threads,
         trim_quals_line=trim_quals_line,
+        ref_path_dir=ref_path_dir,
     )
+    # print(f"\n{script}")
     try:
         run_bash_script(script, project_dir=project_dir)
     except RuntimeError:
@@ -228,6 +235,25 @@ def _run_fastp_minimap_for_pair(
         remove_file(cram_stats_path, not_exist_ok=True)
         raise
     return {"cram_path": cram_path}
+
+
+def _get_text_file_md5(genome_fasta, project_dir, uncompress_if_gzipped=False):
+    if uncompress_if_gzipped:
+        cmd = [FILE_BIN, "--mime-type", str(genome_fasta)]
+        process = run_cmd(cmd, project_dir=project_dir)["process"]
+        mimetype = process.stdout.decode().strip()
+        is_gzipped = "gzip" in mimetype
+    else:
+        is_gzipped = False
+
+    if is_gzipped:
+        script_content = f"zcat {genome_fasta} | {MD5BIN}"
+    else:
+        script_content = f"{MD5BIN} {genome_fasta}"
+
+    process = run_bash_script(script_content, project_dir=project_dir)["process"]
+    genome_md5 = process.stdout.decode().split()[0]
+    return genome_md5
 
 
 def run_fastp_minimap(
@@ -269,6 +295,16 @@ def run_fastp_minimap(
     crams_parent_dir = get_crams_dir(project_dir)
     crams_parent_dir.mkdir(exist_ok=True, parents=True)
 
+    genome_md5 = _get_text_file_md5(
+        genome_fasta, project_dir, uncompress_if_gzipped=True
+    )
+
+    ref_path_dir = project_dir / "ref_path"
+    ref_path_dir.mkdir(exist_ok=True)
+    genome_in_ref_cache = ref_path_dir / genome_md5
+    if not genome_in_ref_cache.exists():
+        os.symlink(genome_fasta, genome_in_ref_cache)
+
     cram_paths = []
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
@@ -301,6 +337,7 @@ def run_fastp_minimap(
                 read_groups_info=read_groups_info,
                 trim_quals_num_bases=trim_quals_num_bases,
                 trim_quals_qual_reduction=trim_quals_qual_reduction,
+                ref_path_dir=ref_path_dir,
             )
             if res:
                 cram_paths.append(res["cram_path"])

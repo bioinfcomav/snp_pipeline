@@ -39,6 +39,7 @@ def run_bash_script(script_content: str, project_dir: Path, verbose=False):
         cmd = ["bash", shell_fhand.name]
         if verbose:
             print(f"Running: {cmd}")
+        # input(f"{shell_fhand.name}")
         process = run(cmd, check=False, capture_output=True)
         if process.returncode:
             msg = "There was a problem running a bash script\n"
@@ -49,3 +50,4 @@ def run_bash_script(script_content: str, project_dir: Path, verbose=False):
                 print(msg)
             logging.error(msg)
             raise RuntimeError("There was an error running a bash script")
+    return {"process": process}

@@ -9,6 +9,8 @@ MINIMAP2_BIN = "minimap2"
 SAMTOOLS_BIN = "samtools"
 TRIM_QUALS_BIN = "trim_quals"
 GATK_PYTHON_BIN = Path("/opt/gatk/gatk")
+MD5BIN = "md5sum"
+FILE_BIN = "file"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
