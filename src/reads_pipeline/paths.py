@@ -110,7 +110,7 @@ def get_paired_and_unpaired_read_files_in_dir(dir_path: Path):
 
     for pair in paired_reads.values():
         if len(pair) == 1:
-            path, pair_number = pair
+            path, pair_number = pair[0]
             if pair_number is None:
                 yield (path,)
             else:
