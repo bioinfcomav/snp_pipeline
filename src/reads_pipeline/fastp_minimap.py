@@ -45,9 +45,6 @@ export REF_PATH={ref_path_dir}
 # minimap2
 {minimap2_bin} -R {rg_str} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
 
-# trim_quals it reduces the qualities from the read edges
-{trim_quals_line}
-
 # This adds mate cigar (MC) and mate score tags (ms) which will be used later by samtools markdup proper
 {samtools_bin} fixmate -u -m - - | \\
 
@@ -58,6 +55,9 @@ export REF_PATH={ref_path_dir}
 # and so doesn't have to store much reference data at any one time
 # -A when used jointly with -r this option overwrites the original base quality
 {samtools_bin} calmd -Ar -@{calmd_num_threads} - {genome_fasta} | \\
+
+# trim_quals it reduces the qualities from the read edges
+{trim_quals_line}
 
 samtools view --reference {genome_fasta} -o {cram_path} - 
 
