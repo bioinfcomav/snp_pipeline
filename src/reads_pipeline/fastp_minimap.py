@@ -57,6 +57,7 @@ export REF_PATH={ref_path_dir}
 {samtools_bin} calmd -Ar -@{calmd_num_threads} - {genome_fasta} | \\
 
 # trim_quals it reduces the qualities from the read edges
+# In the past there has been problems running trim_quals before calmd, so run it after calmd
 {trim_quals_line}
 
 samtools view --reference {genome_fasta} -o {cram_path} - 
@@ -227,7 +228,6 @@ def _run_fastp_minimap_for_pair(
         trim_quals_line=trim_quals_line,
         ref_path_dir=ref_path_dir,
     )
-    # print(f"\n{script}")
     try:
         run_bash_script(script, project_dir=project_dir)
     except RuntimeError:

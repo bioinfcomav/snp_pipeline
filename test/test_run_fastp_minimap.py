@@ -8,6 +8,9 @@ from .config import (
     TEST_PROJECT3_DIR,
     MINIMAP_PROJECT3_GENOME_INDEX,
     MINIMAP_PROJECT3_GENOME_FASTA,
+    TEST_PROJECT4_DIR,
+    MINIMAP_PROJECT4_GENOME_INDEX,
+    MINIMAP_PROJECT4_GENOME_FASTA,
 )
 from reads_pipeline import (
     run_fastp_minimap,
@@ -83,4 +86,19 @@ def test_minimap_ref_path():
             fastp_trim_tail2=10,
             trim_quals_num_bases=0,
             re_run=True,
+        )
+
+
+def test_trim_quals_order():
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        shutil.copytree(TEST_PROJECT4_DIR, project_dir, dirs_exist_ok=True)
+        run_fastp_minimap(
+            project_dir,
+            minimap_index=MINIMAP_PROJECT4_GENOME_INDEX,
+            genome_fasta=MINIMAP_PROJECT4_GENOME_FASTA,
+            deduplicate=False,
+            fastp_trim_front1=10,
+            fastp_trim_front2=10,
+            fastp_trim_tail1=10,
+            fastp_trim_tail2=10,
         )
