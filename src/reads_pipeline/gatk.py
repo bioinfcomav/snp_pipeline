@@ -5,6 +5,7 @@ import gzip
 from collections import defaultdict
 import tempfile
 import json
+from enum import Enum
 
 from reads_pipeline.run_cmd import run_cmd
 from reads_pipeline.paths import (
@@ -102,10 +103,16 @@ def _get_sample_names_from_vcf(vcf):
                 return samples
 
 
+class GATKDBFileMode(Enum):
+    CREATE = "create"
+    UPDATE = "update"
+
+
 def create_db_with_sample_snv_calls(
     vcfs: list[Path],
     project_dir: Path,
     genome_fai_path: Path,
+    mode: GATKDBFileMode,
     batch_size: int = 50,
     reader_threads: int = 4,
 ):
@@ -116,6 +123,11 @@ def create_db_with_sample_snv_calls(
             fhand.write(f"{chrom}\t0\t{length}\n")
         fhand.flush()
 
+    if mode == GATKDBFileMode.UPDATE:
+        samples_in_db = get_samples_in_gatk_db(project_dir)
+    else:
+        samples_in_db = []
+
     vcfs_per_sample = defaultdict(set)
     for vcf in vcfs:
         samples = _get_sample_names_from_vcf(vcf)
@@ -125,6 +137,12 @@ def create_db_with_sample_snv_calls(
             )
         elif len(samples) == 0:
             raise ValueError(f"VCF must contain at least one sample {vcf}")
+
+        if samples[0] in samples_in_db:
+            raise ValueError(
+                f"Sample {samples[0]} is already in the GATK DB, it should not be in another VCF"
+            )
+
         vcfs_per_sample[samples[0]].add(vcf)
 
     for sample, vcfs in vcfs_per_sample.items():
@@ -134,8 +152,18 @@ def create_db_with_sample_snv_calls(
             )
 
     db_dir = get_gatk_db_dir(project_dir)
-    if db_dir.exists():
-        raise ValueError(f"DB dir already exists, GATK would fail: {db_dir}")
+    if mode == GATKDBFileMode.CREATE:
+        if db_dir.exists():
+            raise ValueError(f"DB dir already exists, GATK would fail: {db_dir}")
+    else:
+        if not db_dir.exists():
+            raise ValueError(f"DB dir does not exist: {db_dir}")
+
+    genomic_cmd = (
+        "--genomicsdb-update-workspace-path"
+        if mode == GATKDBFileMode.UPDATE
+        else "--genomicsdb-workspace-path"
+    )
 
     tmp_dir = get_tmp_dir(project_dir)
     tmp_dir.mkdir(exist_ok=True)
@@ -150,7 +178,7 @@ def create_db_with_sample_snv_calls(
             "run",
             str(GATK_PYTHON_BIN),
             "GenomicsDBImport",
-            "--genomicsdb-workspace-path",
+            genomic_cmd,
             str(db_dir),
             "--batch-size",
             str(batch_size),
