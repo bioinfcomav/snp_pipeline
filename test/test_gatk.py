@@ -8,6 +8,7 @@ from reads_pipeline.gatk import (
     create_genome_reference,
     do_sample_snv_calling_basic_germline,
     create_db_with_sample_snv_calls,
+    get_samples_in_gatk_db,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap
 
@@ -54,3 +55,5 @@ def test_create_genome_reference():
         create_db_with_sample_snv_calls(
             vcf_paths, project_dir=project_dir, genome_fai_path=fai_path
         )
+        samples = get_samples_in_gatk_db(project_dir=project_dir)
+        assert samples == ["sample1"]

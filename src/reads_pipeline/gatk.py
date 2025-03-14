@@ -4,6 +4,7 @@ import logging
 import gzip
 from collections import defaultdict
 import tempfile
+import json
 
 from reads_pipeline.run_cmd import run_cmd
 from reads_pipeline.paths import (
@@ -163,7 +164,20 @@ def create_db_with_sample_snv_calls(
             # "--java-options",
             # "-DGATK_STACKTRACE_ON_USER_EXCEPTION=true",
         ]
-        run_cmd(cmd, project_dir=project_dir, verbose=True)
+        run_cmd(cmd, project_dir=project_dir)
+
+
+def get_samples_in_gatk_db(project_dir):
+    db_dir = get_gatk_db_dir(project_dir)
+    if not db_dir.exists():
+        raise ValueError(f"DB dir does not exist: {db_dir}")
+    json_path = db_dir / "callset.json"
+    if not json_path.exists():
+        raise ValueError(f"DB dir does not contain callset.json: {db_dir}")
+
+    json_data = json.loads(json_path.open("rt").read())
+    samples = [callset["sample_name"] for callset in json_data["callsets"]]
+    return samples
 
 
 def do_global_svn_calling():
