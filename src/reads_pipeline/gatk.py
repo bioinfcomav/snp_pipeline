@@ -41,7 +41,11 @@ def do_sample_snv_calling_basic_germline(
     project_dir,
     min_mapq: int = 10,
     mem_in_gb=4,
+    allow_uncompressed_vcf=False,
 ):
+    if not out_vcf.suffix == ".gz" and not allow_uncompressed_vcf:
+        raise ValueError("Output VCF must have a .gz suffix")
+
     tmp_dir = get_tmp_dir(project_dir)
     tmp_dir.mkdir(exist_ok=True)
     cmd = [

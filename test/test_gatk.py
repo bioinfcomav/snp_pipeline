@@ -43,7 +43,7 @@ def test_create_genome_reference():
             vcf_path = vcf_bams_dir / cram_path.with_suffix(".vcf.gz").name
             do_sample_snv_calling_basic_germline(
                 genome_reference_path,
-                [cram_path, cram_path],
+                [cram_path],
                 out_vcf=vcf_path,
                 project_dir=project_dir,
             )
