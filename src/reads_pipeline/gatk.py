@@ -108,7 +108,7 @@ class GATKDBFileMode(Enum):
     UPDATE = "update"
 
 
-def create_db_with_sample_snv_calls(
+def create_db_with_independent_sample_snv_calls(
     vcfs: list[Path],
     project_dir: Path,
     genome_fai_path: Path,
@@ -208,5 +208,90 @@ def get_samples_in_gatk_db(project_dir):
     return samples
 
 
-def do_global_svn_calling():
-    pass
+def do_svn_joint_genotyping_for_all_samples_together(
+    project_dir, genome_fasta: Path, out_vcf: Path, allow_uncompressed_vcf=False
+):
+    if not out_vcf.suffix == ".gz" and not allow_uncompressed_vcf:
+        raise ValueError("Output VCF must have a .gz suffix")
+
+    db_dir = get_gatk_db_dir(project_dir)
+    cmd = [
+        "uv",
+        "run",
+        str(GATK_PYTHON_BIN),
+        "GenotypeGVCFs",
+        "--reference",
+        str(genome_fasta),
+        "--variant",
+        f"gendb://{db_dir}",
+        "--output",
+        str(out_vcf),
+        "--add-output-vcf-command-line",
+    ]
+    run_cmd(cmd, project_dir=project_dir)
+
+
+def filter_and_merge_variants():
+    """
+# Filter Out Low-Quality Variants (Hard Filtering)
+
+Since you cannot use VariantRecalibrator, you will apply hard filtering with VariantFiltration.
+Filtering SNPs
+
+gatk VariantFiltration \
+    -R reference.fasta \
+    -V raw_variants.vcf.gz \
+    -O filtered_SNPs.vcf.gz \
+    --filter-expression "QD < 2.0" --filter-name "QD2" \
+    --filter-expression "FS > 60.0" --filter-name "FS60" \
+    --filter-expression "MQ < 40.0" --filter-name "MQ40" \
+    --filter-expression "MQRankSum < -12.5" --filter-name "MQRankSum" \
+    --filter-expression "ReadPosRankSum < -8.0" --filter-name "ReadPosRankSum"
+
+Explanation of Filters
+
+    Quality by Depth (QD < 2.0) → Low confidence variants.
+    Fisher Strand Bias (FS > 60.0) → Highly biased variants.
+    Mapping Quality (MQ < 40.0) → Low mapping confidence.
+    Mapping Quality Rank Sum (MQRankSum < -12.5) → Bad read alignments.
+    Read Position Bias (ReadPosRankSum < -8.0) → Potential alignment artifacts.
+
+This step removes low-confidence SNPs based on their quality metrics.
+Filtering Indels
+
+Indels often have different quality metrics, so we use slightly different criteria:
+
+gatk VariantFiltration \
+    -R reference.fasta \
+    -V filtered_SNPs.vcf.gz \
+    -O filtered_variants.vcf.gz \
+    --filter-expression "QD < 2.0" --filter-name "QD2" \
+    --filter-expression "FS > 200.0" --filter-name "FS200" \
+    --filter-expression "ReadPosRankSum < -20.0" --filter-name "ReadPosRankSum"
+
+    FS cutoff is higher (FS > 200.0) because indels are more prone to strand bias.
+    Read position bias cutoff is stricter (ReadPosRankSum < -20.0).
+
+Now, you have a high-confidence filtered VCF.
+
+# Merge SNPs and Indels into Complex Variants
+
+To combine adjacent SNPs and indels into haplotypes and complex alleles, use bcftools norm:
+
+bcftools norm -m +any -f reference.fasta filtered_variants.vcf.gz -O z -o final_variants.vcf.gz
+
+    --multiallelics+both → join biallelic sites into multiallelic records, merges SNPs and indels into complex variants.
+    --fasta-ref reference.fasta → Uses the reference genome to correct alleles.
+    --check-ref e
+    --collapse both
+    --output FILE
+    --output-type z → compressed VCF (.vcf.gz)
+    --threads INT
+    --write-index
+
+# Validate the Final VCF
+
+Validate the VCF to ensure correct formatting
+
+bcftools validate final_variants.vcf.gz
+"""

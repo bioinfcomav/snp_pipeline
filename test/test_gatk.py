@@ -7,9 +7,10 @@ from .config import TEST_PROJECT2_DIR
 from reads_pipeline.gatk import (
     create_genome_reference,
     do_sample_snv_calling_basic_germline,
-    create_db_with_sample_snv_calls,
+    create_db_with_independent_sample_snv_calls,
     get_samples_in_gatk_db,
     GATKDBFileMode,
+    do_svn_joint_genotyping_for_all_samples_together,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap
 
@@ -53,7 +54,7 @@ def test_create_genome_reference():
             )
             vcf_paths.append(vcf_path)
 
-        create_db_with_sample_snv_calls(
+        create_db_with_independent_sample_snv_calls(
             vcf_paths,
             project_dir=project_dir,
             genome_fai_path=fai_path,
@@ -61,3 +62,8 @@ def test_create_genome_reference():
         )
         samples = get_samples_in_gatk_db(project_dir=project_dir)
         assert samples == ["sample1"]
+
+        out_vcf = snv_calling_dir / "joint_genotyping.vcf.gz"
+        do_svn_joint_genotyping_for_all_samples_together(
+            project_dir=project_dir, genome_fasta=genome_reference_path, out_vcf=out_vcf
+        )
