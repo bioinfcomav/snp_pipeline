@@ -139,6 +139,10 @@ def get_snv_dir(project_dir) -> Path:
     return path
 
 
+def get_gatk_db_dir(project_dir) -> Path:
+    return get_snv_dir(project_dir) / "gatk_db"
+
+
 def get_vcfs_for_bams_dir(project_dir) -> Path:
     snv_dir = get_snv_dir(project_dir)
     path = snv_dir / "vcfs_for_bams"

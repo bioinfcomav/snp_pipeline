@@ -7,6 +7,7 @@ from .config import TEST_PROJECT2_DIR
 from reads_pipeline.gatk import (
     create_genome_reference,
     do_sample_snv_calling_basic_germline,
+    create_db_with_sample_snv_calls,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap
 
@@ -23,6 +24,7 @@ def test_create_genome_reference():
 
         res = create_genome_reference(genome_fasta, snv_calling_dir, project_dir_path)
         genome_reference_path = res["genome_path"]
+        fai_path = res["fai_path"]
 
         minimap_index = genome_reference_path.with_suffix(".mmi")
         cmd = [MINIMAP2_BIN, "-d", str(minimap_index), str(genome_reference_path)]
@@ -48,3 +50,7 @@ def test_create_genome_reference():
                 project_dir=project_dir,
             )
             vcf_paths.append(vcf_path)
+
+        create_db_with_sample_snv_calls(
+            vcf_paths, project_dir=project_dir, genome_fai_path=fai_path
+        )
