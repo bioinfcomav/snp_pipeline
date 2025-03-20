@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from subprocess import run
 
 from .config import (
     TEST_PROJECT2_DIR,
@@ -102,3 +103,21 @@ def test_trim_quals_order():
             fastp_trim_tail1=10,
             fastp_trim_tail2=10,
         )
+
+
+def test_run_minimap_script():
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        shutil.copytree(TEST_PROJECT4_DIR, project_dir, dirs_exist_ok=True)
+        cmd = [
+            "uv",
+            "run",
+            "run_fastp_minimap",
+            "--minimap_index",
+            MINIMAP_PROJECT4_GENOME_INDEX,
+            "--genome_fasta",
+            MINIMAP_PROJECT4_GENOME_FASTA,
+            "--deduplicate",
+            "false",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)

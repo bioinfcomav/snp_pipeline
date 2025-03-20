@@ -12,6 +12,9 @@ dependencies = [
     "xlrd>=2.0.1",
 ]
 
+[project.scripts]
+run_fastp_minimap = "reads_pipeline.run_fastp_minimap:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
