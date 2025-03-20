@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-run_fastp_minimap = "reads_pipeline.run_fastp_minimap:main"
+run_mapping = "reads_pipeline.run_mapping:main"
 
 [build-system]
 requires = ["hatchling"]

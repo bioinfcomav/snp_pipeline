@@ -105,19 +105,13 @@ def test_trim_quals_order():
         )
 
 
-def test_run_minimap_script():
+def test_run_mapping():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT4_DIR, project_dir, dirs_exist_ok=True)
         cmd = [
             "uv",
             "run",
-            "run_fastp_minimap",
-            "--minimap_index",
-            MINIMAP_PROJECT4_GENOME_INDEX,
-            "--genome_fasta",
-            MINIMAP_PROJECT4_GENOME_FASTA,
-            "--deduplicate",
-            "false",
+            "run_mapping",
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)

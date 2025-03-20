@@ -20,6 +20,11 @@ def get_project_dir(project_dir: None | str | Path) -> Path:
         return Path(os.getcwd())
 
 
+def get_config_path(project_dir) -> Path:
+    project_dir = get_project_dir(project_dir)
+    return project_dir / "pipeline.toml"
+
+
 def get_read_group_info_xls(project_dir) -> Path:
     project_dir = get_project_dir(project_dir)
     return project_dir / "reads.xls"
