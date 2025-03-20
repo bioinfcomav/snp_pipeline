@@ -75,7 +75,9 @@ class PipelineConfig:
 
 def run_pipeline(config):
     reads_pipeline.run_fastqc(
-        project_dir=config["project_dir"], re_run=config["general"]["re_run"], threads=1
+        project_dir=config["project_dir"],
+        re_run=config["general"]["re_run"],
+        threads=config["fastqc"]["num_threads"],
     )
     reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
     reads_pipeline.run_fastp_minimap(
