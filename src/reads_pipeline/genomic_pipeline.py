@@ -6,7 +6,7 @@ import copy
 import reads_pipeline
 
 DEFAULTS = {
-    "general": {"re_run": False},
+    "general": {"re_run": False, "verbose": True},
     "fastp": {
         "min_read_len": 30,
         "num_threads": 3,
@@ -78,6 +78,7 @@ def run_pipeline(config):
         project_dir=config["project_dir"],
         re_run=config["general"]["re_run"],
         threads=config["fastqc"]["num_threads"],
+        verbose=config["general"]["verbose"],
     )
     reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
     reads_pipeline.run_fastp_minimap(
