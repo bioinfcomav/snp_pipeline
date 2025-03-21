@@ -20,7 +20,9 @@ from .paths import (
 from .run_cmd import run_cmd
 
 
-def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run, threads: int):
+def run_fastqc_for_file(
+    reads_path, out_stats_dir, project_dir, re_run, threads: int, verbose
+):
     expected_zip_file = out_stats_dir / reads_path.name.replace(
         FASTQ_EXT, "_fastqc.zip"
     )
@@ -29,12 +31,19 @@ def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run, threads:
     )
     if re_run:
         if expected_zip_file.exists():
+            if verbose:
+                print(f"Removing previous fastqc analisys for {reads_path}")
             os.remove(expected_zip_file)
         if expected_zip_file.exists():
             os.remove(expected_html_file)
     else:
         if expected_zip_file.exists():
+            if verbose:
+                print(f"Skipping fastqc analisys for {reads_path}")
             return
+
+    if verbose:
+        print(f"Running fastqc for {reads_path}")
 
     cmd = [FASTQC_BIN, "-o", str(out_stats_dir)]
     if threads > 1:
@@ -42,10 +51,14 @@ def run_fastqc_for_file(reads_path, out_stats_dir, project_dir, re_run, threads:
 
     cmd.append(str(reads_path))
 
+    if verbose:
+        print("cmd: ", " ".join(cmd))
     run_cmd(cmd, project_dir)
 
 
-def run_fastqc(project_dir: Path | str | None = None, re_run=False, threads=1):
+def run_fastqc(
+    project_dir: Path | str | None = None, re_run=False, threads=1, verbose=False
+):
     get_reads_stats_parent_dir(project_dir).mkdir(exist_ok=True)
     fastq_stats_dir = get_reads_stats_fastqc_parent_dir(project_dir)
     fastq_stats_dir.mkdir(exist_ok=True)
@@ -73,6 +86,7 @@ def run_fastqc(project_dir: Path | str | None = None, re_run=False, threads=1):
                     project_dir,
                     re_run=re_run,
                     threads=threads,
+                    verbose=verbose,
                 )
 
 
