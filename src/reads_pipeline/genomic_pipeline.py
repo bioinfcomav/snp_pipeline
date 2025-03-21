@@ -80,7 +80,6 @@ def run_pipeline(config):
         threads=config["fastqc"]["num_threads"],
         verbose=config["general"]["verbose"],
     )
-    reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
     reads_pipeline.run_fastp_minimap(
         project_dir=config["project_dir"],
         minimap_index=config["minimap"]["index_path"],
@@ -100,6 +99,7 @@ def run_pipeline(config):
     )
     reads_pipeline.collect_fastp_stats(project_dir=config["project_dir"])
     reads_pipeline.collect_cram_stats(project_dir=config["project_dir"])
+    reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
 
 
 if __name__ == "__main__":
