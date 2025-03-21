@@ -274,6 +274,10 @@ gatk VariantFiltration \
 
 Now, you have a high-confidence filtered VCF.
 
+# Filter with BCFTools
+
+bcftools filter -i 'QUAL >= 30' raw_variants.vcf.gz | bcftools view -f PASS -Oz -o high_quality_variants.vcf.
+
 # Merge SNPs and Indels into Complex Variants
 
 To combine adjacent SNPs and indels into haplotypes and complex alleles, use bcftools norm:
