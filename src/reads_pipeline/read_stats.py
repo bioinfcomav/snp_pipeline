@@ -25,7 +25,9 @@ from .utils_file_system import move_files_and_dirs
 def run_fastqc_for_file(
     reads_path, out_stats_dir, project_dir, re_run, threads: int, verbose
 ):
-    with tempfile.TemporaryDirectory() as fastq_result_tmp_dir:
+    with tempfile.TemporaryDirectory(
+        dir=out_stats_dir, prefix="fastqc_tmp_dir_"
+    ) as fastq_result_tmp_dir:
         fastq_result_tmp_dir_path = Path(fastq_result_tmp_dir)
         expected_zip_file = out_stats_dir / reads_path.name.replace(
             FASTQ_EXT, "_fastqc.zip"
