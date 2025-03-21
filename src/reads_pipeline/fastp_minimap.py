@@ -119,6 +119,7 @@ def _run_fastp_minimap_for_pair(
     trim_quals_num_bases: int,
     trim_quals_qual_reduction: int,
     ref_path_dir: Path,
+    verbose: bool,
 ):
     logging.basicConfig(
         filename=get_log_path(project_dir),
@@ -162,10 +163,15 @@ def _run_fastp_minimap_for_pair(
     )
 
     if re_run:
+        if verbose:
+            print(
+                f"Removing cram and cram stats files to rerun analysis: {cram_path}, {cram_stats_path}"
+            )
         remove_file(cram_path, not_exist_ok=True)
         remove_file(cram_stats_path, not_exist_ok=True)
     else:
         if cram_path.exists() and cram_stats_path.exists():
+            print(f"Skipping analysis for existing file: {cram_path}")
             return
         else:
             remove_file(cram_path, not_exist_ok=True)
@@ -177,6 +183,8 @@ def _run_fastp_minimap_for_pair(
     logging.info(
         "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
     )
+    if verbose:
+        print("Running fastp-minimap pipeline for files: " + " ".join(map(str, pair)))
 
     if deduplicate:
         deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
@@ -274,6 +282,7 @@ def run_fastp_minimap(
     trim_quals_num_bases=4,
     trim_quals_qual_reduction=20,
     re_run=False,
+    verbose=True,
 ):
     project_dir = get_project_dir(project_dir)
     tmp_dir = project_dir / "tmp"
@@ -338,6 +347,7 @@ def run_fastp_minimap(
                 trim_quals_num_bases=trim_quals_num_bases,
                 trim_quals_qual_reduction=trim_quals_qual_reduction,
                 ref_path_dir=ref_path_dir,
+                verbose=verbose,
             )
             if res:
                 cram_paths.append(res["cram_path"])

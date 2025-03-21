@@ -96,6 +96,7 @@ def run_pipeline(config):
         duplicates_num_threads=config["samtools"]["duplicates_num_threads"],
         calmd_num_threads=config["samtools"]["calmd_num_threads"],
         re_run=config["general"]["re_run"],
+        verbose=config["general"]["verbose"],
     )
     reads_pipeline.collect_fastp_stats(project_dir=config["project_dir"])
     reads_pipeline.collect_cram_stats(project_dir=config["project_dir"])
