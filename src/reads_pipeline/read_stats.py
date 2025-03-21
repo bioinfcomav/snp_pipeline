@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import zipfile
 import statistics
+import tempfile
 
 import numpy
 import pandas
@@ -18,42 +19,47 @@ from .paths import (
     get_clean_reads_fastqc_stats_parent_dir,
 )
 from .run_cmd import run_cmd
+from .utils_file_system import move_files_and_dirs
 
 
 def run_fastqc_for_file(
     reads_path, out_stats_dir, project_dir, re_run, threads: int, verbose
 ):
-    expected_zip_file = out_stats_dir / reads_path.name.replace(
-        FASTQ_EXT, "_fastqc.zip"
-    )
-    expected_html_file = out_stats_dir / reads_path.name.replace(
-        FASTQ_EXT, "_fastqc.html"
-    )
-    if re_run:
-        if expected_zip_file.exists():
-            if verbose:
-                print(f"Removing previous fastqc analisys for {reads_path}")
-            os.remove(expected_zip_file)
-        if expected_zip_file.exists():
-            os.remove(expected_html_file)
-    else:
-        if expected_zip_file.exists():
-            if verbose:
-                print(f"Skipping fastqc analisys for {reads_path}")
-            return
+    with tempfile.TemporaryDirectory() as fastq_result_tmp_dir:
+        fastq_result_tmp_dir_path = Path(fastq_result_tmp_dir)
+        expected_zip_file = out_stats_dir / reads_path.name.replace(
+            FASTQ_EXT, "_fastqc.zip"
+        )
+        expected_html_file = out_stats_dir / reads_path.name.replace(
+            FASTQ_EXT, "_fastqc.html"
+        )
+        if re_run:
+            if expected_zip_file.exists():
+                if verbose:
+                    print(f"Removing previous fastqc analisys for {reads_path}")
+                os.remove(expected_zip_file)
+            if expected_zip_file.exists():
+                os.remove(expected_html_file)
+        else:
+            if expected_zip_file.exists():
+                if verbose:
+                    print(f"Skipping fastqc analisys for {reads_path}")
+                return
 
-    if verbose:
-        print(f"Running fastqc for {reads_path}")
+        if verbose:
+            print(f"Running fastqc for {reads_path}")
 
-    cmd = [FASTQC_BIN, "-o", str(out_stats_dir)]
-    if threads > 1:
-        cmd.extend(["--threads", str(threads)])
+        cmd = [FASTQC_BIN, "-o", str(fastq_result_tmp_dir_path)]
+        if threads > 1:
+            cmd.extend(["--threads", str(threads)])
 
-    cmd.append(str(reads_path))
+        cmd.append(str(reads_path))
 
-    if verbose:
-        print("cmd: ", " ".join(cmd))
-    run_cmd(cmd, project_dir)
+        if verbose:
+            print("cmd: ", " ".join(cmd))
+        run_cmd(cmd, project_dir)
+
+        move_files_and_dirs(fastq_result_tmp_dir, out_stats_dir)
 
 
 def run_fastqc(
