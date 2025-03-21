@@ -63,13 +63,17 @@ def run_fastqc_for_file(
 
 
 def run_fastqc(
-    project_dir: Path | str | None = None, re_run=False, threads=1, verbose=False
+    project_dir: Path | str | None = None,
+    re_run=False,
+    threads=1,
+    verbose=False,
+    read_types=("raw", "clean"),
 ):
     get_reads_stats_parent_dir(project_dir).mkdir(exist_ok=True)
     fastq_stats_dir = get_reads_stats_fastqc_parent_dir(project_dir)
     fastq_stats_dir.mkdir(exist_ok=True)
 
-    for read_type in ["raw", "clean"]:
+    for read_type in read_types:
         if read_type == "raw":
             reads_parent_dir = get_raw_reads_parent_dir(project_dir)
             stats_dir = get_raw_reads_fastqc_stats_parent_dir(project_dir)

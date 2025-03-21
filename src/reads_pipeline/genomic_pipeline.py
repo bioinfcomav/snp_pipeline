@@ -79,7 +79,9 @@ def run_pipeline(config):
         re_run=config["general"]["re_run"],
         threads=config["fastqc"]["num_threads"],
         verbose=config["general"]["verbose"],
+        read_types=("raw",),
     )
+    reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
     reads_pipeline.run_fastp_minimap(
         project_dir=config["project_dir"],
         minimap_index=config["minimap"]["index_path"],
@@ -100,6 +102,13 @@ def run_pipeline(config):
     )
     reads_pipeline.collect_fastp_stats(project_dir=config["project_dir"])
     reads_pipeline.collect_cram_stats(project_dir=config["project_dir"])
+    reads_pipeline.run_fastqc(
+        project_dir=config["project_dir"],
+        re_run=config["general"]["re_run"],
+        threads=config["fastqc"]["num_threads"],
+        verbose=config["general"]["verbose"],
+        read_types=("clean",),
+    )
     reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
 
 
