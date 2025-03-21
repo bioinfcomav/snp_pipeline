@@ -1,6 +1,8 @@
 from pathlib import Path
 import logging
 import os
+import shutil
+import tempfile
 
 import numpy
 import pandas
@@ -26,6 +28,7 @@ from .paths import (
 )
 from .run_cmd import run_bash_script, run_cmd
 from .read_group import get_read_group_info, create_minimap_rg_str
+from .utils_file_system import move_files_and_dirs
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +113,6 @@ def _run_fastp_minimap_for_pair(
     minimap_num_threads: int,
     sort_num_threads: int,
     calmd_num_threads: int,
-    tmp_dir: Path,
     duplicates_num_threads: int,
     genome_fasta: Path,
     deduplicate: bool,
@@ -118,7 +120,7 @@ def _run_fastp_minimap_for_pair(
     read_groups_info: dict,
     trim_quals_num_bases: int,
     trim_quals_qual_reduction: int,
-    ref_path_dir: Path,
+    genome_md5: str,
     verbose: bool,
 ):
     logging.basicConfig(
@@ -153,95 +155,127 @@ def _run_fastp_minimap_for_pair(
     if fastp_trim_tail2:
         fastp_gobal_trim += f"--trim_tail2={fastp_trim_tail2} "
 
-    html_report_path = stats_dir / pair[0].with_suffix(".html").name
-    json_report_path = stats_dir / pair[0].with_suffix(".json").name
+    with tempfile.TemporaryDirectory(
+        prefix="cram_tmp_dir_", dir=crams_dir
+    ) as crams_tmp_dir:
+        crams_tmp_dir_path = Path(crams_tmp_dir)
 
-    cram_path = crams_dir / (pair[0].name.removesuffix(".fastq.gz") + ".cram")
+        ref_path_dir = crams_tmp_dir_path / "ref_path"
+        ref_path_dir.mkdir(exist_ok=True)
+        genome_in_ref_cache = ref_path_dir / genome_md5
+        if not genome_in_ref_cache.exists():
+            os.symlink(genome_fasta, genome_in_ref_cache)
 
-    cram_stats_path = crams_dir / (
-        pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
-    )
+        tmp_dir = tempfile.TemporaryDirectory(prefix="tmp_dir_", dir=crams_tmp_dir)
 
-    if re_run:
-        if verbose:
-            print(
-                f"Removing cram and cram stats files to rerun analysis: {cram_path}, {cram_stats_path}"
-            )
-        remove_file(cram_path, not_exist_ok=True)
-        remove_file(cram_stats_path, not_exist_ok=True)
-    else:
-        if cram_path.exists() and cram_stats_path.exists():
-            print(f"Skipping analysis for existing file: {cram_path}")
-            return
-        else:
+        html_report_path = stats_dir / pair[0].with_suffix(".html").name
+        json_report_path = stats_dir / pair[0].with_suffix(".json").name
+        html_report_tmp_path = crams_tmp_dir_path / pair[0].with_suffix(".html").name
+        json_report_tmp_path = crams_tmp_dir_path / pair[0].with_suffix(".json").name
+
+        cram_path = crams_dir / (pair[0].name.removesuffix(".fastq.gz") + ".cram")
+        cram_tmp_path = crams_tmp_dir_path / (
+            pair[0].name.removesuffix(".fastq.gz") + ".cram"
+        )
+
+        cram_stats_path = crams_dir / (
+            pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
+        )
+        cram_stats_tmp_path = crams_tmp_dir_path / (
+            pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
+        )
+
+        if re_run:
+            if verbose:
+                print(
+                    f"Removing cram and cram stats files to rerun analysis: {cram_path}, {cram_stats_path}"
+                )
             remove_file(cram_path, not_exist_ok=True)
             remove_file(cram_stats_path, not_exist_ok=True)
-            logging.warning(
-                f"One mapped file or stat was missing the existing file was removed and the analysis was re done: {cram_path} or {cram_stats_path}"
+        else:
+            if cram_path.exists() and cram_stats_path.exists():
+                print(f"Skipping analysis for existing file: {cram_path}")
+                return
+            else:
+                remove_file(cram_path, not_exist_ok=True)
+                remove_file(cram_stats_path, not_exist_ok=True)
+                logging.warning(
+                    f"One mapped file or stat was missing the existing file was removed and the analysis was re done: {cram_path} or {cram_stats_path}"
+                )
+
+        logging.info(
+            "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
+        )
+        if verbose:
+            print(
+                "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
             )
 
-    logging.info(
-        "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
-    )
-    if verbose:
-        print("Running fastp-minimap pipeline for files: " + " ".join(map(str, pair)))
+        if deduplicate:
+            deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
+                samtools_bin=SAMTOOLS_BIN,
+                duplicates_num_threads=duplicates_num_threads,
+                genome_fasta=genome_fasta,
+                cram_path=cram_path,
+                tmp_dir=tmp_dir.name,
+                sort_num_threads=sort_num_threads,
+            )
+        else:
+            deduplicate_line = SORT_LINES.format(
+                samtools_bin=SAMTOOLS_BIN,
+                genome_fasta=genome_fasta,
+                cram_path=cram_path,
+                tmp_dir=tmp_dir.name,
+                sort_num_threads=sort_num_threads,
+            )
 
-    if deduplicate:
-        deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
+        if trim_quals_num_bases > 0:
+            trim_quals_line = TRIM_QUALS_LINE.format(
+                num_bases=trim_quals_num_bases, qual_reduction=trim_quals_qual_reduction
+            )
+        else:
+            trim_quals_line = ""
+
+        script = PIPE_TEMPLATE.format(
+            fastp_bin=FASTP_BIN,
+            fastp_in1=fastp_in1,
+            fastp_in2=fastp_in2,
+            fastp_html_report_path=html_report_tmp_path,
+            fastp_json_report_path=json_report_tmp_path,
+            min_read_len=min_read_len,
+            fastp_num_threads=fastp_num_threads,
+            fastp_gobal_trim=fastp_gobal_trim,
+            minimap2_bin=MINIMAP2_BIN,
+            minimap_index=minimap_index,
+            minimap_num_threads=minimap_num_threads,
+            rg_str=rg_str,
             samtools_bin=SAMTOOLS_BIN,
-            duplicates_num_threads=duplicates_num_threads,
-            genome_fasta=genome_fasta,
-            cram_path=cram_path,
-            tmp_dir=tmp_dir,
+            trim_quals_bin=TRIM_QUALS_BIN,
             sort_num_threads=sort_num_threads,
-        )
-    else:
-        deduplicate_line = SORT_LINES.format(
-            samtools_bin=SAMTOOLS_BIN,
-            genome_fasta=genome_fasta,
-            cram_path=cram_path,
             tmp_dir=tmp_dir,
-            sort_num_threads=sort_num_threads,
+            genome_fasta=genome_fasta,
+            cram_path=cram_tmp_path,
+            cram_stats_path=cram_stats_tmp_path,
+            deduplicate_and_sort_lines=deduplicate_line,
+            calmd_num_threads=calmd_num_threads,
+            trim_quals_line=trim_quals_line,
+            ref_path_dir=ref_path_dir,
         )
+        try:
+            run_bash_script(script, project_dir=project_dir)
+        except RuntimeError:
+            remove_file(cram_path, not_exist_ok=True)
+            remove_file(cram_stats_path, not_exist_ok=True)
+            raise
 
-    if trim_quals_num_bases > 0:
-        trim_quals_line = TRIM_QUALS_LINE.format(
-            num_bases=trim_quals_num_bases, qual_reduction=trim_quals_qual_reduction
-        )
-    else:
-        trim_quals_line = ""
+        tmp_dir.cleanup()
+        tmp_dir_path = Path(tmp_dir.name)
+        if tmp_dir_path.exists():
+            tmp_dir_path.rmdir()
 
-    script = PIPE_TEMPLATE.format(
-        fastp_bin=FASTP_BIN,
-        fastp_in1=fastp_in1,
-        fastp_in2=fastp_in2,
-        fastp_html_report_path=html_report_path,
-        fastp_json_report_path=json_report_path,
-        min_read_len=min_read_len,
-        fastp_num_threads=fastp_num_threads,
-        fastp_gobal_trim=fastp_gobal_trim,
-        minimap2_bin=MINIMAP2_BIN,
-        minimap_index=minimap_index,
-        minimap_num_threads=minimap_num_threads,
-        rg_str=rg_str,
-        samtools_bin=SAMTOOLS_BIN,
-        trim_quals_bin=TRIM_QUALS_BIN,
-        sort_num_threads=sort_num_threads,
-        tmp_dir=tmp_dir,
-        genome_fasta=genome_fasta,
-        cram_path=cram_path,
-        cram_stats_path=cram_stats_path,
-        deduplicate_and_sort_lines=deduplicate_line,
-        calmd_num_threads=calmd_num_threads,
-        trim_quals_line=trim_quals_line,
-        ref_path_dir=ref_path_dir,
-    )
-    try:
-        run_bash_script(script, project_dir=project_dir)
-    except RuntimeError:
-        remove_file(cram_path, not_exist_ok=True)
-        remove_file(cram_stats_path, not_exist_ok=True)
-        raise
+        shutil.move(html_report_tmp_path, html_report_path)
+        shutil.move(json_report_tmp_path, json_report_path)
+        move_files_and_dirs(crams_tmp_dir, crams_dir)
     return {"cram_path": cram_path}
 
 
@@ -284,9 +318,14 @@ def run_fastp_minimap(
     re_run=False,
     verbose=True,
 ):
+    if not genome_fasta.exists():
+        raise FileNotFoundError(f"Genome fasta file not found: {genome_fasta}")
+    genome_fasta = genome_fasta.resolve()
+    if not minimap_index.exists():
+        raise FileNotFoundError(f"Minimap index file not found: {minimap_index}")
+    minimap_index = minimap_index.resolve()
+
     project_dir = get_project_dir(project_dir)
-    tmp_dir = project_dir / "tmp"
-    tmp_dir.mkdir(exist_ok=True)
 
     logging.basicConfig(
         filename=get_log_path(project_dir),
@@ -307,12 +346,6 @@ def run_fastp_minimap(
     genome_md5 = _get_text_file_md5(
         genome_fasta, project_dir, uncompress_if_gzipped=True
     )
-
-    ref_path_dir = project_dir / "ref_path"
-    ref_path_dir.mkdir(exist_ok=True)
-    genome_in_ref_cache = ref_path_dir / genome_md5
-    if not genome_in_ref_cache.exists():
-        os.symlink(genome_fasta, genome_in_ref_cache)
 
     cram_paths = []
     for raw_reads_dir in raw_reads_dirs:
@@ -338,7 +371,6 @@ def run_fastp_minimap(
                 minimap_num_threads=minimap_num_threads,
                 sort_num_threads=sort_num_threads,
                 calmd_num_threads=calmd_num_threads,
-                tmp_dir=tmp_dir,
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
                 deduplicate=deduplicate,
@@ -346,7 +378,7 @@ def run_fastp_minimap(
                 read_groups_info=read_groups_info,
                 trim_quals_num_bases=trim_quals_num_bases,
                 trim_quals_qual_reduction=trim_quals_qual_reduction,
-                ref_path_dir=ref_path_dir,
+                genome_md5=genome_md5,
                 verbose=verbose,
             )
             if res:
