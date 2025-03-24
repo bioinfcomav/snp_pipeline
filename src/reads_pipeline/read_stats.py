@@ -102,12 +102,13 @@ def run_fastqc(
                 )
 
 
-def _parse_fastqc_data(file_content: str):
+def _parse_fastqc_data(file_content: str, bioproject_dir: str):
     modules = file_content.split(">>END_MODULE")
     # for module in modules:
     #    print(module)
     basic_stats = dict([line.split("\t") for line in modules[0].splitlines()])
     result = {}
+    result["dir"] = bioproject_dir
     result["file_name"] = basic_stats["Filename"]
     result["num_seqs"] = basic_stats["Total Sequences"]
     result[r"%GC"] = basic_stats[r"%GC"]
@@ -119,12 +120,12 @@ def _parse_fastqc_data(file_content: str):
     return result
 
 
-def _parse_fastqc_zip_file(zip_path: Path):
+def _parse_fastqc_zip_file(zip_path: Path, bioproject_dir: str):
     with zipfile.ZipFile(zip_path, "r") as zip_file:
         zip_name = zip_path.name.replace(".zip", "")
         with zip_file.open(f"{zip_name}/fastqc_data.txt") as file:
             file_content = file.read().decode()
-            return _parse_fastqc_data(file_content)
+            return _parse_fastqc_data(file_content, bioproject_dir)
 
 
 def collect_fastqc_stats(project_dir):
@@ -140,13 +141,14 @@ def collect_fastqc_stats(project_dir):
 
         stats = []
         for fastq_stats_dir in fastq_stats_dirs:
+            bioproject_dir = fastq_stats_dir.name
             fastqc_zip_paths = [
                 path
                 for path in fastq_stats_dir.iterdir()
                 if str(path).endswith("_fastqc.zip")
             ]
             for zip_path in fastqc_zip_paths:
-                stats.append(_parse_fastqc_zip_file(zip_path))
+                stats.append(_parse_fastqc_zip_file(zip_path, bioproject_dir))
         result[read_type] = pandas.DataFrame(stats)
         excel_path = stats_dir / "fastqc_stats.xlsx"
         result[read_type].to_excel(excel_path, index=False)
