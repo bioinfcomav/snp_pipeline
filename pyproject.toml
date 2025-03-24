@@ -1,6 +1,5 @@
 [project]
 name = "reads-pipeline"
-version = "0.1.0"
 description = "Pipeline to clean and map reads"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -11,16 +10,22 @@ dependencies = [
     "pandas>=2.2.3",
     "xlrd>=2.0.1",
 ]
+# We're setting the version using hatch-vcs
+dynamic = ["version"]
 
 [project.scripts]
 run_mapping = "reads_pipeline.script_run_mapping:main"
 check_mapping = "reads_pipeline.script_check_mapping:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [dependency-groups]
 dev = [
+    "hatch-vcs>=0.4.0",
     "pytest>=8.3.4",
 ]
