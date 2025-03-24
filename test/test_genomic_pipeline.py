@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from subprocess import run
 
-import reads_pipeline
 from .config import (
     TEST_PROJECT2_DIR,
 )
