@@ -16,5 +16,5 @@ def test_run_pipeline():
         cmd = ["uv", "run", str(script_path), str(project_path)]
         run(cmd, check=True, cwd=project_dir)
 
-        # cmd = ["uv", "run", "check_mapping", str(project_path)]
-        # run(cmd, check=True, cwd=project_dir)
+        cmd = ["uv", "run", "check_mapping", str(project_path)]
+        run(cmd, check=True, cwd=project_dir)
