@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-run_mapping = "reads_pipeline.run_mapping:main"
+run_mapping = "reads_pipeline.script_run_mapping:main"
 
 [build-system]
 requires = ["hatchling"]
