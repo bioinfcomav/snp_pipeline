@@ -3,7 +3,7 @@ import argparse
 import tomllib
 import sys
 
-from reads_pipeline.paths import get_config_path
+from reads_pipeline.paths import get_config_path, get_project_dir
 from reads_pipeline.genomic_pipeline import PipelineConfig, run_pipeline
 
 
@@ -25,21 +25,23 @@ def get_args():
 
 def main():
     args = get_args()
-    config_path = get_config_path(args.project_dir)
+    project_dir = get_project_dir(args.project_dir)
+    config_path = get_config_path(project_dir)
+
+    if not project_dir.exists():
+        msg = f"The project directorory {project_dir} does not exist"
+        print(msg)
+        sys.exit(2)
 
     if not config_path.exists():
         msg = f"The config file {config_path} does not exist"
         print(msg)
         sys.exit(2)
 
-    default_project_dir = config_path.parent
-
     with config_path.open("rb") as fhand:
-        config = PipelineConfig(
-            tomllib.load(fhand), default_project_dir=default_project_dir
-        )
+        config = PipelineConfig(tomllib.load(fhand))
 
-    run_pipeline(config)
+    run_pipeline(project_dir, config)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,3 @@
-# project_dir = "/some/path"
-
 [general]
 genome_path = "genomexyztest.fasta"
 #re_run = true

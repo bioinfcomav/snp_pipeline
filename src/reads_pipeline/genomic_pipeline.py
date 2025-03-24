@@ -27,15 +27,11 @@ DEFAULTS = {
 
 
 class PipelineConfig:
-    def __init__(self, config: dict, default_project_dir: Path):
+    def __init__(self, config: dict):
         self._config = copy.deepcopy(config)
-        self._default_project_dir = default_project_dir
 
     def __getitem__(self, key):
         value = None
-
-        if key == "project_dir":
-            value = Path(self._config.get(key, self._default_project_dir))
 
         minimap_config = self._config["minimap"]
         if "index_path" not in minimap_config:
@@ -73,17 +69,17 @@ class PipelineConfig:
         return value
 
 
-def run_pipeline(config):
+def run_pipeline(project_dir, config):
     reads_pipeline.run_fastqc(
-        project_dir=config["project_dir"],
+        project_dir=project_dir,
         re_run=config["general"]["re_run"],
         threads=config["fastqc"]["num_threads"],
         verbose=config["general"]["verbose"],
         read_types=("raw",),
     )
-    reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
+    reads_pipeline.collect_fastqc_stats(project_dir=project_dir)
     reads_pipeline.run_fastp_minimap(
-        project_dir=config["project_dir"],
+        project_dir=project_dir,
         minimap_index=config["minimap"]["index_path"],
         genome_fasta=config["general"]["genome_path"],
         deduplicate=config["samtools"]["deduplicate"],
@@ -100,16 +96,16 @@ def run_pipeline(config):
         re_run=config["general"]["re_run"],
         verbose=config["general"]["verbose"],
     )
-    reads_pipeline.collect_fastp_stats(project_dir=config["project_dir"])
-    reads_pipeline.collect_cram_stats(project_dir=config["project_dir"])
+    reads_pipeline.collect_fastp_stats(project_dir=project_dir)
+    reads_pipeline.collect_cram_stats(project_dir=project_dir)
     reads_pipeline.run_fastqc(
-        project_dir=config["project_dir"],
+        project_dir=project_dir,
         re_run=config["general"]["re_run"],
         threads=config["fastqc"]["num_threads"],
         verbose=config["general"]["verbose"],
         read_types=("clean",),
     )
-    reads_pipeline.collect_fastqc_stats(project_dir=config["project_dir"])
+    reads_pipeline.collect_fastqc_stats(project_dir=project_dir)
 
 
 if __name__ == "__main__":
