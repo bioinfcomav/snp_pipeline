@@ -66,6 +66,10 @@ def get_reads_stats_fastp_parent_dir(project_dir) -> Path:
     return get_reads_stats_parent_dir(project_dir) / "fastp"
 
 
+def get_reads_stats_fastp_excel_report_path(project_dir) -> Path:
+    return get_reads_stats_fastp_parent_dir(project_dir) / "fastp_stats.xlsx"
+
+
 def get_raw_reads_fastqc_stats_parent_dir(project_dir) -> Path:
     return get_reads_stats_fastqc_parent_dir(project_dir) / "raw"
 

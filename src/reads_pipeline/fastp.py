@@ -8,6 +8,7 @@ from .paths import (
     get_raw_reads_parent_dir,
     get_clean_reads_parent_dir,
     get_reads_stats_fastp_parent_dir,
+    get_reads_stats_fastp_excel_report_path,
     FASTP_BIN,
     remove_file,
 )
@@ -165,4 +166,5 @@ def collect_fastp_stats(project_dir):
             read_report["file_name"] = path.name
             read_report |= _parse_fastp_json(path)
             reports.append(read_report)
-    return pandas.DataFrame(reports)
+    dframe = pandas.DataFrame(reports)
+    dframe.to_excel(get_reads_stats_fastp_excel_report_path(project_dir), index=False)
