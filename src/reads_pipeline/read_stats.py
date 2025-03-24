@@ -4,7 +4,6 @@ import zipfile
 import statistics
 import tempfile
 
-import numpy
 import pandas
 
 from .paths import (
@@ -12,6 +11,7 @@ from .paths import (
     get_read_files_in_dir,
     FASTQC_BIN,
     FASTQ_EXT,
+    FASTQC_XLS_STATS_FNAME,
     get_reads_stats_parent_dir,
     get_raw_reads_parent_dir,
     get_clean_reads_parent_dir,
@@ -150,6 +150,6 @@ def collect_fastqc_stats(project_dir):
             for zip_path in fastqc_zip_paths:
                 stats.append(_parse_fastqc_zip_file(zip_path, bioproject_dir))
         result[read_type] = pandas.DataFrame(stats)
-        excel_path = stats_dir / "fastqc_stats.xlsx"
+        excel_path = stats_dir / FASTQC_XLS_STATS_FNAME
         result[read_type].to_excel(excel_path, index=False)
     return result

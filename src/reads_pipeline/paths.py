@@ -11,6 +11,7 @@ TRIM_QUALS_BIN = "trim_quals"
 GATK_PYTHON_BIN = Path("/opt/gatk/gatk")
 MD5BIN = "md5sum"
 FILE_BIN = "file"
+FASTQC_XLS_STATS_FNAME = "fastqc_stats.xls"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
@@ -167,3 +168,9 @@ def remove_file(path, not_exist_ok=False):
         raise ValueError(f"Path can't be removed because it doesn't exist: {path}")
     if path.exists():
         os.remove(path)
+
+
+def is_gzip_file(path: Path) -> bool:
+    with open(path, "rb") as f:
+        magic = f.read(2)
+    return magic == b"\x1f\x8b"
