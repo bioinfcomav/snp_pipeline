@@ -18,6 +18,7 @@ from .paths import (
     get_paired_and_unpaired_read_files_in_dir,
     get_crams_dir,
     get_crams_stats_dir,
+    get_crams_stats_excel_report_path,
     FASTP_BIN,
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
@@ -459,7 +460,7 @@ def collect_cram_stats(project_dir):
 
     stats_dir = get_crams_stats_dir(project_dir)
     stats_dir.mkdir(exist_ok=True)
-    stats_path = stats_dir / "cram_stats.xlsx"
+    stats_path = get_crams_stats_excel_report_path(project_dir)
     results.to_excel(stats_path, index=False)
 
 

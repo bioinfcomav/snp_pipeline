@@ -143,6 +143,10 @@ def get_crams_dir(project_dir) -> Path:
     return path
 
 
+def get_crams_stats_excel_report_path(project_dir) -> Path:
+    return get_crams_dir(project_dir) / "cram_stats.xlsx"
+
+
 def get_snv_dir(project_dir) -> Path:
     project_dir = get_project_dir(project_dir=project_dir)
     path = project_dir / "snv_calling"
