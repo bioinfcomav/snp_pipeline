@@ -87,11 +87,14 @@ def run_fastqc(
         reads_dirs = [path for path in reads_parent_dir.iterdir() if path.is_dir()]
 
         stats_dir.mkdir(exist_ok=True)
+        idx = 0
         for reads_dir in reads_dirs:
             dir_name = reads_dir.name
             out_stats_dir = stats_dir / dir_name
             out_stats_dir.mkdir(exist_ok=True)
             for reads_path in get_read_files_in_dir(reads_dir):
+                if verbose:
+                    print(f"Running fastqc for read file num: {idx}: {reads_path}")
                 run_fastqc_for_file(
                     reads_path,
                     out_stats_dir,
@@ -100,6 +103,7 @@ def run_fastqc(
                     threads=threads,
                     verbose=verbose,
                 )
+                idx += 1
 
 
 def _parse_fastqc_data(file_content: str, bioproject_dir: str):

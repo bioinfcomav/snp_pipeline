@@ -355,7 +355,12 @@ def run_fastp_minimap(
         crams_dir = crams_parent_dir / dir_name
         crams_dir.mkdir(exist_ok=True)
 
-        for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
+        for idx, pair in enumerate(
+            get_paired_and_unpaired_read_files_in_dir(raw_reads_dir)
+        ):
+            if verbose:
+                pair_str = ", ".join(map(str, pair))
+                print(f"Cleaning and mapping read pair num {idx}: {pair_str}")
             res = _run_fastp_minimap_for_pair(
                 pair,
                 project_dir=project_dir,
