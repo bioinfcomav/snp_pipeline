@@ -83,20 +83,8 @@ def _run_fastqc(
     verbose=False,
     read_types=("raw", "clean"),
     dry_run=False,
+    n_files_to_process=None,
 ):
-    if verbose:
-        res = run_fastqc(
-            project_dir=project_dir,
-            re_run=re_run,
-            threads=threads,
-            verbose=False,
-            read_types=read_types,
-            dry_run=True,
-        )
-        n_files_to_process = res["n_files_processed"]
-    else:
-        n_files_to_process = None
-
     get_reads_stats_parent_dir(project_dir).mkdir(exist_ok=True)
     fastq_stats_dir = get_reads_stats_fastqc_parent_dir(project_dir)
     fastq_stats_dir.mkdir(exist_ok=True)
@@ -158,9 +146,10 @@ def run_fastqc(
         project_dir=project_dir,
         re_run=re_run,
         threads=threads,
-        verbose=False,
+        verbose=verbose,
         read_types=read_types,
         dry_run=False,
+        n_files_to_process=n_files_to_process,
     )
 
 
