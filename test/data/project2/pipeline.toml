@@ -1,6 +1,7 @@
 [general]
 genome_path = "tomato_SL12_400000_700000.fasta"
 #re_run = true
+verbose = false
 
 [minimap]
 index_path = "tomato_SL12_400000_700000.fasta.mmi"

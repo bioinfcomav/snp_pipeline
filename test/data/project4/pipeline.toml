@@ -1,6 +1,7 @@
 [general]
 genome_path = "genomexyztest.fasta"
 #re_run = true
+verbose = false
 
 [minimap]
 index_path = "genomexyztest.fasta.mmi"
