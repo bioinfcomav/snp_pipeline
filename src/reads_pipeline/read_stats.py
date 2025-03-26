@@ -23,7 +23,15 @@ from .utils_file_system import move_files_and_dirs
 
 
 def run_fastqc_for_file(
-    reads_path, out_stats_dir, project_dir, re_run, threads: int, verbose
+    reads_path,
+    out_stats_dir,
+    project_dir,
+    re_run,
+    threads: int,
+    verbose: bool,
+    dry_run: bool,
+    n_files_to_process: int,
+    n_file_processing: int,
 ):
     with tempfile.TemporaryDirectory(
         dir=out_stats_dir, prefix="fastqc_tmp_dir_"
@@ -46,10 +54,12 @@ def run_fastqc_for_file(
             if expected_zip_file.exists():
                 if verbose:
                     print(f"Skipping fastqc analisys for {reads_path}")
-                return
+                return {"run": False, "should_have_run": False}
 
         if verbose:
-            print(f"Running fastqc for {reads_path}")
+            print(
+                f"Running fastqc {n_file_processing} out of {n_files_to_process} for {reads_path}"
+            )
 
         cmd = [FASTQC_BIN, "-o", str(fastq_result_tmp_dir_path)]
         if threads > 1:
@@ -59,22 +69,39 @@ def run_fastqc_for_file(
 
         if verbose:
             print("cmd: ", " ".join(cmd))
-        run_cmd(cmd, project_dir)
+        if not dry_run:
+            run_cmd(cmd, project_dir)
 
         move_files_and_dirs(fastq_result_tmp_dir, out_stats_dir)
+        return {"run": True, "should_have_run": True}
 
 
-def run_fastqc(
+def _run_fastqc(
     project_dir: Path | str | None = None,
     re_run=False,
     threads=1,
     verbose=False,
     read_types=("raw", "clean"),
+    dry_run=False,
 ):
+    if verbose:
+        res = run_fastqc(
+            project_dir=project_dir,
+            re_run=re_run,
+            threads=threads,
+            verbose=False,
+            read_types=read_types,
+            dry_run=True,
+        )
+        n_files_to_process = res["n_files_processed"]
+    else:
+        n_files_to_process = None
+
     get_reads_stats_parent_dir(project_dir).mkdir(exist_ok=True)
     fastq_stats_dir = get_reads_stats_fastqc_parent_dir(project_dir)
     fastq_stats_dir.mkdir(exist_ok=True)
 
+    n_files_processed = 1
     for read_type in read_types:
         if read_type == "raw":
             reads_parent_dir = get_raw_reads_parent_dir(project_dir)
@@ -87,23 +114,54 @@ def run_fastqc(
         reads_dirs = [path for path in reads_parent_dir.iterdir() if path.is_dir()]
 
         stats_dir.mkdir(exist_ok=True)
-        idx = 0
         for reads_dir in reads_dirs:
             dir_name = reads_dir.name
             out_stats_dir = stats_dir / dir_name
             out_stats_dir.mkdir(exist_ok=True)
             for reads_path in get_read_files_in_dir(reads_dir):
-                if verbose:
-                    print(f"Running fastqc for read file num: {idx}: {reads_path}")
-                run_fastqc_for_file(
+                res = run_fastqc_for_file(
                     reads_path,
                     out_stats_dir,
                     project_dir,
                     re_run=re_run,
                     threads=threads,
                     verbose=verbose,
+                    dry_run=dry_run,
+                    n_files_to_process=n_files_to_process,
+                    n_file_processing=n_files_processed,
                 )
-                idx += 1
+                n_files_processed += int(res["should_have_run"])
+    return {"n_files_processed": n_files_processed - 1}
+
+
+def run_fastqc(
+    project_dir: Path | str | None = None,
+    re_run=False,
+    threads=1,
+    verbose=False,
+    read_types=("raw", "clean"),
+):
+    if verbose:
+        res = _run_fastqc(
+            project_dir=project_dir,
+            re_run=re_run,
+            threads=threads,
+            verbose=False,
+            read_types=read_types,
+            dry_run=True,
+        )
+        n_files_to_process = res["n_files_processed"]
+    else:
+        n_files_to_process = None
+
+    return _run_fastqc(
+        project_dir=project_dir,
+        re_run=re_run,
+        threads=threads,
+        verbose=False,
+        read_types=read_types,
+        dry_run=False,
+    )
 
 
 def _parse_fastqc_data(file_content: str, bioproject_dir: str):

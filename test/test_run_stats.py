@@ -13,10 +13,13 @@ from reads_pipeline import (
 def test_run_stats():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
-        run_fastqc(project_dir, threads=2)
+        res = run_fastqc(project_dir, threads=2, verbose=True)
+        assert res["n_files_processed"] == 2
 
-        run_fastqc(project_dir, re_run=False)
-        run_fastqc(project_dir, re_run=True, threads=2)
+        res = run_fastqc(project_dir, re_run=False)
+        assert res["n_files_processed"] == 0
+        res = run_fastqc(project_dir, re_run=True, threads=2)
+        assert res["n_files_processed"] == 2
 
         result = collect_fastqc_stats(project_dir)
         assert "num_seqs" in result["raw"].columns
