@@ -1,0 +1,28 @@
+[general]
+genome_path = "genome.fa"
+#re_run = true
+
+[minimap]
+index_path = "genome.mmi"
+#num_threads = 20
+
+[trim_quals]
+#num_bases = 3
+#qual_reduction = 20
+
+[samtools]
+deduplicate = true
+#sort_num_threads = 10
+#duplicates_num_threads=4
+calmd_num_threads=2
+
+[fastp]
+#min_read_len = 30
+#num_threads = 3
+#trim_front1 = 10
+#trim_tail1 = 10
+#trim_front2 = 10
+#trim_tail2 = 10
+
+[fastqc]
+#num_threads = 4

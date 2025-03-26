@@ -195,7 +195,8 @@ def _run_fastp_minimap_for_pair(
             remove_file(cram_stats_path, not_exist_ok=True)
         else:
             if cram_path.exists() and cram_stats_path.exists():
-                print(f"Skipping analysis for existing file: {cram_path}")
+                if verbose:
+                    print(f"Skipping analysis for existing file: {cram_path}")
                 return
             else:
                 remove_file(cram_path, not_exist_ok=True)
@@ -299,7 +300,7 @@ def _get_text_file_md5(genome_fasta, project_dir, uncompress_if_gzipped=False):
     return genome_md5
 
 
-def run_fastp_minimap(
+def _run_fastp_minimap(
     project_dir: Path,
     minimap_index: Path,
     genome_fasta: Path,
@@ -390,6 +391,48 @@ def run_fastp_minimap(
             if res:
                 cram_paths.append(res["cram_path"])
     return {"cram_paths": cram_paths}
+
+
+def run_fastp_minimap(
+    project_dir: Path,
+    minimap_index: Path,
+    genome_fasta: Path,
+    deduplicate: bool,
+    min_read_len=30,
+    fastp_num_threads=3,
+    fastp_trim_front1=0,
+    fastp_trim_tail1=0,
+    fastp_trim_front2=0,
+    fastp_trim_tail2=0,
+    minimap_num_threads=3,
+    sort_num_threads=8,
+    duplicates_num_threads=8,
+    calmd_num_threads=2,
+    trim_quals_num_bases=4,
+    trim_quals_qual_reduction=20,
+    re_run=False,
+    verbose=False,
+):
+    _run_fastp_minimap(
+        project_dir=project_dir,
+        minimap_index=minimap_index,
+        genome_fasta=genome_fasta,
+        deduplicate=deduplicate,
+        min_read_len=min_read_len,
+        fastp_num_threads=fastp_num_threads,
+        fastp_trim_front1=fastp_trim_front1,
+        fastp_trim_tail1=fastp_trim_tail1,
+        fastp_trim_front2=fastp_trim_front2,
+        fastp_trim_tail2=fastp_trim_tail2,
+        minimap_num_threads=minimap_num_threads,
+        sort_num_threads=sort_num_threads,
+        duplicates_num_threads=duplicates_num_threads,
+        calmd_num_threads=calmd_num_threads,
+        trim_quals_num_bases=trim_quals_num_bases,
+        trim_quals_qual_reduction=trim_quals_qual_reduction,
+        re_run=re_run,
+        verbose=verbose,
+    )
 
 
 def _parse_cram_stats(cram_stats_path):
