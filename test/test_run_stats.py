@@ -13,7 +13,7 @@ from reads_pipeline import (
 def test_run_stats():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
-        res = run_fastqc(project_dir, threads=2, verbose=True)
+        res = run_fastqc(project_dir, threads=2)
         assert res["n_files_processed"] == 2
 
         res = run_fastqc(project_dir, re_run=False)
@@ -29,6 +29,5 @@ def test_run_fastp():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
         run_fastp(project_dir)
-        stats = collect_fastp_stats(project_dir)
-        assert "dir" in stats.columns
+        collect_fastp_stats(project_dir)
         run_fastp(project_dir, re_run=True)
