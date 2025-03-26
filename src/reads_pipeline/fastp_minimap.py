@@ -123,13 +123,15 @@ def _run_fastp_minimap_for_pair(
     trim_quals_qual_reduction: int,
     genome_md5: str,
     verbose: bool,
+    dry_run: bool,
 ):
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    if not dry_run:
+        logging.basicConfig(
+            filename=get_log_path(project_dir),
+            filemode="a",
+            level=logging.INFO,
+            force=True,
+        )
     read_id = pair[0].name.split(".")[0]
     excel_file = get_read_group_info_xls(project_dir)
     if read_id not in read_groups_info:
@@ -197,21 +199,25 @@ def _run_fastp_minimap_for_pair(
             if cram_path.exists() and cram_stats_path.exists():
                 if verbose:
                     print(f"Skipping analysis for existing file: {cram_path}")
-                return
+                return {"should_have_run": False}
             else:
                 remove_file(cram_path, not_exist_ok=True)
                 remove_file(cram_stats_path, not_exist_ok=True)
-                logging.warning(
-                    f"One mapped file or stat was missing the existing file was removed and the analysis was re done: {cram_path} or {cram_stats_path}"
-                )
+                if not dry_run:
+                    logging.warning(
+                        f"One mapped file or stat was missing the existing file was removed and the analysis was re done: {cram_path} or {cram_stats_path}"
+                    )
 
-        logging.info(
-            "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
-        )
-        if verbose:
-            print(
+        if not dry_run:
+            logging.info(
                 "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
             )
+        if verbose:
+            if not dry_run:
+                print(
+                    "Running fastp-minimap pipeline for files: "
+                    + " ".join(map(str, pair))
+                )
 
         if deduplicate:
             deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
@@ -264,7 +270,8 @@ def _run_fastp_minimap_for_pair(
             ref_path_dir=ref_path_dir,
         )
         try:
-            run_bash_script(script, project_dir=project_dir)
+            if not dry_run:
+                run_bash_script(script, project_dir=project_dir)
         except RuntimeError:
             remove_file(cram_path, not_exist_ok=True)
             remove_file(cram_stats_path, not_exist_ok=True)
@@ -275,10 +282,11 @@ def _run_fastp_minimap_for_pair(
         if tmp_dir_path.exists():
             tmp_dir_path.rmdir()
 
-        shutil.move(html_report_tmp_path, html_report_path)
-        shutil.move(json_report_tmp_path, json_report_path)
-        move_files_and_dirs(crams_tmp_dir, crams_dir)
-    return {"cram_path": cram_path}
+        if not dry_run:
+            shutil.move(html_report_tmp_path, html_report_path)
+            shutil.move(json_report_tmp_path, json_report_path)
+            move_files_and_dirs(crams_tmp_dir, crams_dir)
+    return {"cram_path": cram_path, "should_have_run": True}
 
 
 def _get_text_file_md5(genome_fasta, project_dir, uncompress_if_gzipped=False):
@@ -305,6 +313,8 @@ def _run_fastp_minimap(
     minimap_index: Path,
     genome_fasta: Path,
     deduplicate: bool,
+    dry_run: bool,
+    num_analyses_to_do: int,
     min_read_len=30,
     fastp_num_threads=3,
     fastp_trim_front1=0,
@@ -345,11 +355,15 @@ def _run_fastp_minimap(
     crams_parent_dir = get_crams_dir(project_dir)
     crams_parent_dir.mkdir(exist_ok=True, parents=True)
 
-    genome_md5 = _get_text_file_md5(
-        genome_fasta, project_dir, uncompress_if_gzipped=True
-    )
+    if dry_run:
+        genome_md5 = "genome"
+    else:
+        genome_md5 = _get_text_file_md5(
+            genome_fasta, project_dir, uncompress_if_gzipped=True
+        )
 
     cram_paths = []
+    num_analyses_done = 1
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
         stats_dir = stats_parent_dir / dir_name
@@ -357,12 +371,12 @@ def _run_fastp_minimap(
         crams_dir = crams_parent_dir / dir_name
         crams_dir.mkdir(exist_ok=True)
 
-        for idx, pair in enumerate(
-            get_paired_and_unpaired_read_files_in_dir(raw_reads_dir)
-        ):
+        for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
             if verbose:
                 pair_str = ", ".join(map(str, pair))
-                print(f"Cleaning and mapping read pair num {idx}: {pair_str}")
+                print(
+                    f"Cleaning and mapping read pair {num_analyses_done} out of {num_analyses_to_do} : {pair_str}"
+                )
             res = _run_fastp_minimap_for_pair(
                 pair,
                 project_dir=project_dir,
@@ -387,10 +401,12 @@ def _run_fastp_minimap(
                 trim_quals_qual_reduction=trim_quals_qual_reduction,
                 genome_md5=genome_md5,
                 verbose=verbose,
+                dry_run=dry_run,
             )
-            if res:
+            if "cram_path" in res:
                 cram_paths.append(res["cram_path"])
-    return {"cram_paths": cram_paths}
+            num_analyses_done += int(res["should_have_run"])
+    return {"cram_paths": cram_paths, "num_analyses_done": num_analyses_done - 1}
 
 
 def run_fastp_minimap(
@@ -413,7 +429,7 @@ def run_fastp_minimap(
     re_run=False,
     verbose=False,
 ):
-    _run_fastp_minimap(
+    res = _run_fastp_minimap(
         project_dir=project_dir,
         minimap_index=minimap_index,
         genome_fasta=genome_fasta,
@@ -432,6 +448,31 @@ def run_fastp_minimap(
         trim_quals_qual_reduction=trim_quals_qual_reduction,
         re_run=re_run,
         verbose=verbose,
+        dry_run=True,
+        num_analyses_to_do=None,
+    )
+    num_analyses_done = res["num_analyses_done"]
+    res = _run_fastp_minimap(
+        project_dir=project_dir,
+        minimap_index=minimap_index,
+        genome_fasta=genome_fasta,
+        deduplicate=deduplicate,
+        min_read_len=min_read_len,
+        fastp_num_threads=fastp_num_threads,
+        fastp_trim_front1=fastp_trim_front1,
+        fastp_trim_tail1=fastp_trim_tail1,
+        fastp_trim_front2=fastp_trim_front2,
+        fastp_trim_tail2=fastp_trim_tail2,
+        minimap_num_threads=minimap_num_threads,
+        sort_num_threads=sort_num_threads,
+        duplicates_num_threads=duplicates_num_threads,
+        calmd_num_threads=calmd_num_threads,
+        trim_quals_num_bases=trim_quals_num_bases,
+        trim_quals_qual_reduction=trim_quals_qual_reduction,
+        re_run=re_run,
+        verbose=verbose,
+        dry_run=False,
+        num_analyses_to_do=num_analyses_done,
     )
 
 
