@@ -23,6 +23,7 @@ from .paths import (
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
     TRIM_QUALS_BIN,
+    SEQ_STATS_BIN,
     FILE_BIN,
     MD5BIN,
     remove_file,
@@ -45,6 +46,10 @@ export REF_PATH={ref_path_dir}
 
 # fastp
 {fastp_bin} {fastp_in1} {fastp_in2} --stdout -h {fastp_html_report_path} -j {fastp_json_report_path} --length_required {min_read_len} --overrepresentation_analysis {fastp_gobal_trim} --thread {fastp_num_threads} | \\
+
+# Calc GC stats
+
+{seq_stats_bin} --out-stats {seq_stats_report_path} --seqs-to-stdout - | \\
 
 # minimap2
 {minimap2_bin} -R {rg_str} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
@@ -171,10 +176,14 @@ def _run_fastp_minimap_for_pair(
 
         tmp_dir = tempfile.TemporaryDirectory(prefix="tmp_dir_", dir=crams_tmp_dir)
 
-        html_report_path = stats_dir / pair[0].with_suffix(".html").name
-        json_report_path = stats_dir / pair[0].with_suffix(".json").name
-        html_report_tmp_path = crams_tmp_dir_path / pair[0].with_suffix(".html").name
-        json_report_tmp_path = crams_tmp_dir_path / pair[0].with_suffix(".json").name
+        html_report_path = stats_dir / (pair[0].with_suffix("").name + ".fastp.html")
+        json_report_path = stats_dir / (pair[0].with_suffix("").name + ".fastp.json")
+        html_report_tmp_path = crams_tmp_dir_path / html_report_path.name
+        json_report_tmp_path = crams_tmp_dir_path / json_report_path.name
+        seq_stats_report_path = stats_dir / (
+            pair[0].with_suffix("").name + ".seq_stats.json"
+        )
+        seq_stats_report_tmp_path = crams_tmp_dir_path / seq_stats_report_path.name
 
         cram_path = crams_dir / (pair[0].name.removesuffix(".fastq.gz") + ".cram")
         cram_tmp_path = crams_tmp_dir_path / (
@@ -250,6 +259,7 @@ def _run_fastp_minimap_for_pair(
             fastp_in2=fastp_in2,
             fastp_html_report_path=html_report_tmp_path,
             fastp_json_report_path=json_report_tmp_path,
+            seq_stats_report_path=seq_stats_report_tmp_path,
             min_read_len=min_read_len,
             fastp_num_threads=fastp_num_threads,
             fastp_gobal_trim=fastp_gobal_trim,
@@ -259,6 +269,7 @@ def _run_fastp_minimap_for_pair(
             rg_str=rg_str,
             samtools_bin=SAMTOOLS_BIN,
             trim_quals_bin=TRIM_QUALS_BIN,
+            seq_stats_bin=SEQ_STATS_BIN,
             sort_num_threads=sort_num_threads,
             tmp_dir=tmp_dir,
             genome_fasta=genome_fasta,
@@ -285,6 +296,7 @@ def _run_fastp_minimap_for_pair(
         if not dry_run:
             shutil.move(html_report_tmp_path, html_report_path)
             shutil.move(json_report_tmp_path, json_report_path)
+            shutil.move(seq_stats_report_tmp_path, seq_stats_report_path)
             move_files_and_dirs(crams_tmp_dir, crams_dir)
     return {"cram_path": cram_path, "should_have_run": True}
 

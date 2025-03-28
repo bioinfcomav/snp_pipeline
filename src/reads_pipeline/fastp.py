@@ -94,7 +94,7 @@ def run_fastp(project_dir, min_len=30, deduplicate=False, threads=3, re_run=Fals
 def _parse_fastp_json(path):
     with path.open("rt") as fhand:
         report = json.load(fhand)
-
+    print(report.keys())
     result = {}
     summary = report["summary"]["before_filtering"]
     result["num_raw_reads"] = summary["total_reads"]
@@ -159,7 +159,9 @@ def collect_fastp_stats(project_dir):
     stats_dirs = [path for path in stats_parent_dir.iterdir() if path.is_dir()]
     reports = []
     for stats_dir in stats_dirs:
-        json_reports = [path for path in stats_dir.iterdir() if path.suffix == ".json"]
+        json_reports = [
+            path for path in stats_dir.iterdir() if path.suffix == ".fastp.json"
+        ]
         for path in json_reports:
             read_report = {}
             read_report["dir"] = stats_dir.name

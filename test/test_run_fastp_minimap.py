@@ -107,6 +107,7 @@ def test_trim_quals_order():
 
 def test_run_mapping():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        print("testing")
         shutil.copytree(TEST_PROJECT4_DIR, project_dir, dirs_exist_ok=True)
         cmd = [
             "uv",

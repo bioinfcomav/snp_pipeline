@@ -14,6 +14,7 @@ from reads_pipeline.paths import (
     GATK_PYTHON_BIN,
     get_tmp_dir,
     get_gatk_db_dir,
+    BCFTOOLS_BIN,
 )
 
 
@@ -231,7 +232,7 @@ def do_svn_joint_genotyping_for_all_samples_together(
     run_cmd(cmd, project_dir=project_dir)
 
 
-def filter_and_merge_variants():
+def filter_and_merge_variants(project_dir: Path, in_vcf: Path, verbose=False):
     """
 # Filter Out Low-Quality Variants (Hard Filtering)
 
@@ -299,3 +300,9 @@ Validate the VCF to ensure correct formatting
 
 bcftools validate final_variants.vcf.gz
 """
+
+    cmd = [BCFTOOLS_BIN]
+    cmd.extend(["filter", "-i", "QUAL >= 30", str(in_vcf)])
+    if verbose:
+        print(" ".join(cmd))
+    run_cmd(cmd, project_dir=project_dir)
