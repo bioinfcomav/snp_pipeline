@@ -107,7 +107,7 @@ def _parse_read_file_name(path):
 
     if items[-1].startswith("p") and items[-1][1:].isdigit():
         pair_number = int(items[-1][1:])
-        base_name = ".".join(items[:-1])
+        base_name = ".".join(items[:-1]) + ".p"
     else:
         pair_number = None
         base_name = ".".join(items)
