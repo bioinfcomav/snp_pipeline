@@ -163,8 +163,9 @@ def _run_fastp_minimap_for_pair(
     if fastp_trim_tail2:
         fastp_gobal_trim += f"--trim_tail2={fastp_trim_tail2} "
 
+    tmp_dir = None if dry_run else crams_dir
     with tempfile.TemporaryDirectory(
-        prefix="cram_tmp_dir_", dir=crams_dir
+        prefix="cram_tmp_dir_", dir=tmp_dir
     ) as crams_tmp_dir:
         crams_tmp_dir_path = Path(crams_tmp_dir)
 
