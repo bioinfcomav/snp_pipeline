@@ -379,9 +379,11 @@ def _run_fastp_minimap(
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
         stats_dir = stats_parent_dir / dir_name
-        stats_dir.mkdir(exist_ok=True)
+        if not dry_run:
+            stats_dir.mkdir(exist_ok=True)
         crams_dir = crams_parent_dir / dir_name
-        crams_dir.mkdir(exist_ok=True)
+        if not dry_run:
+            crams_dir.mkdir(exist_ok=True)
 
         for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
             if verbose:
