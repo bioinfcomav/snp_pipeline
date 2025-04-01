@@ -296,6 +296,7 @@ def _run_fastp_minimap_for_pair(
             tmp_dir_path.rmdir()
 
         if not dry_run:
+            shutil.rmtree(ref_path_dir)
             shutil.move(html_report_tmp_path, html_report_path)
             shutil.move(json_report_tmp_path, json_report_path)
             shutil.move(seq_stats_report_tmp_path, seq_stats_report_path)
