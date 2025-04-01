@@ -21,6 +21,7 @@ DEFAULTS = {
         "sort_num_threads": 8,
         "duplicates_num_threads": 4,
         "calmd_num_threads": 2,
+        "samtools_stats_num_threads": 4,
     },
     "fastqc": {"num_threads": 6},
 }
@@ -85,6 +86,7 @@ def run_pipeline(project_dir, config):
         sort_num_threads=config["samtools"]["sort_num_threads"],
         duplicates_num_threads=config["samtools"]["duplicates_num_threads"],
         calmd_num_threads=config["samtools"]["calmd_num_threads"],
+        samtools_stats_num_threads=config["samtools"]["samtools_stats_num_threads"],
         re_run=config["general"]["re_run"],
         verbose=config["general"]["verbose"],
     )

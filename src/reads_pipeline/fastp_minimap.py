@@ -75,7 +75,7 @@ samtools view --reference {genome_fasta} -o {cram_path} -
 samtools index {cram_path}
 
 # stats
-samtools stats {cram_path} > {cram_stats_path}
+samtools stats -@{samtools_stats_num_threads} {cram_path} > {cram_stats_path}
 """
 
 SORT_AND_DEDUPLIATE_LINES = """# When estimating the total number of concurrent threads to allocate,
@@ -120,6 +120,7 @@ def _run_fastp_minimap_for_pair(
     sort_num_threads: int,
     calmd_num_threads: int,
     duplicates_num_threads: int,
+    samtools_stats_num_threads: int,
     genome_fasta: Path,
     deduplicate: bool,
     re_run: bool,
@@ -281,6 +282,7 @@ def _run_fastp_minimap_for_pair(
             calmd_num_threads=calmd_num_threads,
             trim_quals_line=trim_quals_line,
             ref_path_dir=ref_path_dir,
+            samtools_stats_num_threads=samtools_stats_num_threads,
         )
         try:
             if not dry_run:
@@ -340,6 +342,7 @@ def _run_fastp_minimap(
     sort_num_threads=8,
     duplicates_num_threads=8,
     calmd_num_threads=2,
+    samtools_stats_num_threads=4,
     trim_quals_num_bases=4,
     trim_quals_qual_reduction=20,
     re_run=False,
@@ -404,6 +407,7 @@ def _run_fastp_minimap(
                 minimap_num_threads=minimap_num_threads,
                 sort_num_threads=sort_num_threads,
                 calmd_num_threads=calmd_num_threads,
+                samtools_stats_num_threads=samtools_stats_num_threads,
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
                 deduplicate=deduplicate,
@@ -438,6 +442,7 @@ def run_fastp_minimap(
     sort_num_threads=8,
     duplicates_num_threads=8,
     calmd_num_threads=2,
+    samtools_stats_num_threads=4,
     trim_quals_num_bases=4,
     trim_quals_qual_reduction=20,
     re_run=False,
@@ -458,6 +463,7 @@ def run_fastp_minimap(
         sort_num_threads=sort_num_threads,
         duplicates_num_threads=duplicates_num_threads,
         calmd_num_threads=calmd_num_threads,
+        samtools_stats_num_threads=samtools_stats_num_threads,
         trim_quals_num_bases=trim_quals_num_bases,
         trim_quals_qual_reduction=trim_quals_qual_reduction,
         re_run=re_run,
@@ -481,6 +487,7 @@ def run_fastp_minimap(
         sort_num_threads=sort_num_threads,
         duplicates_num_threads=duplicates_num_threads,
         calmd_num_threads=calmd_num_threads,
+        samtools_stats_num_threads=samtools_stats_num_threads,
         trim_quals_num_bases=trim_quals_num_bases,
         trim_quals_qual_reduction=trim_quals_qual_reduction,
         re_run=re_run,
