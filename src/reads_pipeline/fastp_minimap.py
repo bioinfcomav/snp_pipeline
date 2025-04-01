@@ -129,6 +129,8 @@ def _run_fastp_minimap_for_pair(
     genome_md5: str,
     verbose: bool,
     dry_run: bool,
+    num_analyses_done: int,
+    num_analyses_to_do: int,
 ):
     if not dry_run:
         logging.basicConfig(
@@ -222,12 +224,11 @@ def _run_fastp_minimap_for_pair(
             logging.info(
                 "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
             )
-        if verbose:
-            if not dry_run:
-                print(
-                    "Running fastp-minimap pipeline for files: "
-                    + " ".join(map(str, pair))
-                )
+        if verbose and not dry_run:
+            pair_str = ", ".join(map(str, pair))
+            print(
+                f"Cleaning and mapping read pair {num_analyses_done} out of {num_analyses_to_do} : {pair_str}"
+            )
 
         if deduplicate:
             deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
@@ -387,11 +388,6 @@ def _run_fastp_minimap(
             crams_dir.mkdir(exist_ok=True)
 
         for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
-            if verbose:
-                pair_str = ", ".join(map(str, pair))
-                print(
-                    f"Cleaning and mapping read pair {num_analyses_done} out of {num_analyses_to_do} : {pair_str}"
-                )
             res = _run_fastp_minimap_for_pair(
                 pair,
                 project_dir=project_dir,
@@ -417,6 +413,8 @@ def _run_fastp_minimap(
                 genome_md5=genome_md5,
                 verbose=verbose,
                 dry_run=dry_run,
+                num_analyses_done=num_analyses_done,
+                num_analyses_to_do=num_analyses_to_do,
             )
             if "cram_path" in res:
                 cram_paths.append(res["cram_path"])
