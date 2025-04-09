@@ -3,6 +3,8 @@ import logging
 import os
 import shutil
 import tempfile
+from functools import partial
+from multiprocessing import Pool
 
 import numpy
 import pandas
@@ -105,7 +107,7 @@ TRIM_QUALS_LINE = (
 
 
 def _run_fastp_minimap_for_pair(
-    pair: tuple[Path],
+    idx_pair: tuple[int, tuple[Path]],
     project_dir: Path,
     stats_dir: Path,
     crams_dir: Path,
@@ -130,9 +132,9 @@ def _run_fastp_minimap_for_pair(
     genome_md5: str,
     verbose: bool,
     dry_run: bool,
-    num_analyses_done: int,
     num_analyses_to_do: int,
 ):
+    pair_idx, pair = idx_pair
     if not dry_run:
         logging.basicConfig(
             filename=get_log_path(project_dir),
@@ -228,7 +230,7 @@ def _run_fastp_minimap_for_pair(
         if verbose and not dry_run:
             pair_str = ", ".join(map(str, pair))
             print(
-                f"Cleaning and mapping read pair {num_analyses_done} out of {num_analyses_to_do} : {pair_str}"
+                f"Cleaning and mapping read pair with idx: {pair_idx}, total to process: {num_analyses_to_do} : {pair_str}"
             )
 
         if deduplicate:
@@ -347,6 +349,7 @@ def _run_fastp_minimap(
     trim_quals_qual_reduction=20,
     re_run=False,
     verbose=True,
+    num_mappings_in_parallel=1,
 ):
     if not genome_fasta.exists():
         raise FileNotFoundError(f"Genome fasta file not found: {genome_fasta}")
@@ -380,8 +383,7 @@ def _run_fastp_minimap(
             genome_fasta, project_dir, uncompress_if_gzipped=True
         )
 
-    cram_paths = []
-    num_analyses_done = 1
+    fastq_pairs_to_process = []
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
         stats_dir = stats_parent_dir / dir_name
@@ -392,42 +394,53 @@ def _run_fastp_minimap(
             crams_dir.mkdir(exist_ok=True)
 
         for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
-            res = _run_fastp_minimap_for_pair(
-                pair,
-                project_dir=project_dir,
-                stats_dir=stats_dir,
-                crams_dir=crams_dir,
-                min_read_len=min_read_len,
-                fastp_num_threads=fastp_num_threads,
-                fastp_trim_front1=fastp_trim_front1,
-                fastp_trim_tail1=fastp_trim_tail1,
-                fastp_trim_front2=fastp_trim_front2,
-                fastp_trim_tail2=fastp_trim_tail2,
-                minimap_index=minimap_index,
-                minimap_num_threads=minimap_num_threads,
-                sort_num_threads=sort_num_threads,
-                calmd_num_threads=calmd_num_threads,
-                samtools_stats_num_threads=samtools_stats_num_threads,
-                duplicates_num_threads=duplicates_num_threads,
-                genome_fasta=genome_fasta,
-                deduplicate=deduplicate,
-                re_run=re_run,
-                read_groups_info=read_groups_info,
-                trim_quals_num_bases=trim_quals_num_bases,
-                trim_quals_qual_reduction=trim_quals_qual_reduction,
-                genome_md5=genome_md5,
-                verbose=verbose,
-                dry_run=dry_run,
-                num_analyses_done=num_analyses_done,
-                num_analyses_to_do=num_analyses_to_do,
-            )
-            if "cram_path" in res:
-                cram_paths.append(res["cram_path"])
-            num_analyses_done += int(res["should_have_run"])
+            fastq_pairs_to_process.append((len(fastq_pairs_to_process), pair))
+
+    run_fastp_minimap_for_pair = partial(
+        _run_fastp_minimap_for_pair,
+        project_dir=project_dir,
+        stats_dir=stats_dir,
+        crams_dir=crams_dir,
+        min_read_len=min_read_len,
+        fastp_num_threads=fastp_num_threads,
+        fastp_trim_front1=fastp_trim_front1,
+        fastp_trim_tail1=fastp_trim_tail1,
+        fastp_trim_front2=fastp_trim_front2,
+        fastp_trim_tail2=fastp_trim_tail2,
+        minimap_index=minimap_index,
+        minimap_num_threads=minimap_num_threads,
+        sort_num_threads=sort_num_threads,
+        calmd_num_threads=calmd_num_threads,
+        samtools_stats_num_threads=samtools_stats_num_threads,
+        duplicates_num_threads=duplicates_num_threads,
+        genome_fasta=genome_fasta,
+        deduplicate=deduplicate,
+        re_run=re_run,
+        read_groups_info=read_groups_info,
+        trim_quals_num_bases=trim_quals_num_bases,
+        trim_quals_qual_reduction=trim_quals_qual_reduction,
+        genome_md5=genome_md5,
+        verbose=verbose,
+        dry_run=dry_run,
+        num_analyses_to_do=num_analyses_to_do,
+    )
+
+    if num_mappings_in_parallel > 1:
+        with Pool(num_mappings_in_parallel) as pool:
+            results = pool.map(run_fastp_minimap_for_pair, fastq_pairs_to_process)
+    else:
+        results = map(run_fastp_minimap_for_pair, fastq_pairs_to_process)
+
+    cram_paths = []
+    num_analyses_done = 1
+    for res in results:
+        if "cram_path" in res:
+            cram_paths.append(res["cram_path"])
+        num_analyses_done += int(res["should_have_run"])
     return {"cram_paths": cram_paths, "num_analyses_done": num_analyses_done - 1}
 
 
-def run_fastp_minimap(
+def run_fastp_minimap_for_fastqs(
     project_dir: Path,
     minimap_index: Path,
     genome_fasta: Path,
@@ -447,6 +460,7 @@ def run_fastp_minimap(
     trim_quals_qual_reduction=20,
     re_run=False,
     verbose=False,
+    num_mappings_in_parallel=1,
 ):
     res = _run_fastp_minimap(
         project_dir=project_dir,
@@ -467,9 +481,10 @@ def run_fastp_minimap(
         trim_quals_num_bases=trim_quals_num_bases,
         trim_quals_qual_reduction=trim_quals_qual_reduction,
         re_run=re_run,
-        verbose=verbose,
+        verbose=False,
         dry_run=True,
         num_analyses_to_do=None,
+        num_mappings_in_parallel=1,
     )
     num_analyses_done = res["num_analyses_done"]
     res = _run_fastp_minimap(
@@ -494,7 +509,9 @@ def run_fastp_minimap(
         verbose=verbose,
         dry_run=False,
         num_analyses_to_do=num_analyses_done,
+        num_mappings_in_parallel=num_mappings_in_parallel,
     )
+    return res
 
 
 def _parse_cram_stats(cram_stats_path):

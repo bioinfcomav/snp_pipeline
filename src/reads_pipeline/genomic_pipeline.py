@@ -6,7 +6,7 @@ import copy
 import reads_pipeline
 
 DEFAULTS = {
-    "general": {"re_run": False, "verbose": True},
+    "general": {"re_run": False, "verbose": True, "num_mappings_in_parallel": 1},
     "fastp": {
         "min_read_len": 30,
         "num_threads": 3,
@@ -71,7 +71,7 @@ class PipelineConfig:
 
 
 def run_pipeline(project_dir, config):
-    reads_pipeline.run_fastp_minimap(
+    reads_pipeline.run_fastp_minimap_for_fastqs(
         project_dir=project_dir,
         minimap_index=config["minimap"]["index_path"],
         genome_fasta=config["general"]["genome_path"],

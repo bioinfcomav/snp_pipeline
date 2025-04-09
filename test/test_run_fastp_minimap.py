@@ -14,7 +14,7 @@ from .config import (
     MINIMAP_PROJECT4_GENOME_FASTA,
 )
 from reads_pipeline import (
-    run_fastp_minimap,
+    run_fastp_minimap_for_fastqs,
     collect_cram_stats,
     plot_mapq_distributions,
     plot_coverage_distributions,
@@ -24,7 +24,7 @@ from reads_pipeline import (
 def test_run_pipeline():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT2_DIR, project_dir, dirs_exist_ok=True)
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
@@ -40,20 +40,20 @@ def test_run_pipeline():
 
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT2_DIR, project_dir, dirs_exist_ok=True)
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
             deduplicate=False,
         )
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
             deduplicate=False,
             re_run=False,
         )
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
             genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
@@ -65,7 +65,7 @@ def test_run_pipeline():
 def test_minimap_ref_path():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT3_DIR, project_dir, dirs_exist_ok=True)
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT3_GENOME_INDEX,
             genome_fasta=MINIMAP_PROJECT3_GENOME_FASTA,
@@ -76,7 +76,7 @@ def test_minimap_ref_path():
             fastp_trim_tail2=10,
         )
 
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT3_GENOME_INDEX,
             genome_fasta=MINIMAP_PROJECT3_GENOME_FASTA,
@@ -93,7 +93,7 @@ def test_minimap_ref_path():
 def test_trim_quals_order():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT4_DIR, project_dir, dirs_exist_ok=True)
-        run_fastp_minimap(
+        run_fastp_minimap_for_fastqs(
             project_dir,
             minimap_index=MINIMAP_PROJECT4_GENOME_INDEX,
             genome_fasta=MINIMAP_PROJECT4_GENOME_FASTA,
@@ -116,3 +116,15 @@ def test_run_mapping():
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)
+
+
+def test_minimap_in_parallel():
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        shutil.copytree(TEST_PROJECT3_DIR, project_dir, dirs_exist_ok=True)
+        run_fastp_minimap_for_fastqs(
+            project_dir,
+            minimap_index=MINIMAP_PROJECT3_GENOME_INDEX,
+            genome_fasta=MINIMAP_PROJECT3_GENOME_FASTA,
+            deduplicate=False,
+            num_mappings_in_parallel=2,
+        )
