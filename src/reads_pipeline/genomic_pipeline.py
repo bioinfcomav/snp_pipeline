@@ -89,6 +89,7 @@ def run_pipeline(project_dir, config):
         samtools_stats_num_threads=config["samtools"]["samtools_stats_num_threads"],
         re_run=config["general"]["re_run"],
         verbose=config["general"]["verbose"],
+        num_mappings_in_parallel=config["general"]["num_mappings_in_parallel"],
     )
     reads_pipeline.collect_fastp_stats(project_dir=project_dir)
     reads_pipeline.collect_cram_stats(project_dir=project_dir)
