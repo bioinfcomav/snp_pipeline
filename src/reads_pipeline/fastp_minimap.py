@@ -591,10 +591,7 @@ def collect_cram_stats(project_dir):
         results.append({"dir": crams_dir_name} | _parse_cram_stats(cram_stats_path))
     results = pandas.DataFrame(results)
 
-    stats_dir = get_crams_stats_dir(project_dir)
-    stats_dir.mkdir(exist_ok=True)
-    stats_path = get_crams_stats_excel_report_path(project_dir)
-    results.to_excel(stats_path, index=False)
+    return results
 
 
 def _get_cram_stat_paths(project_dir):
