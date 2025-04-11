@@ -327,6 +327,19 @@ def _get_text_file_md5(genome_fasta, project_dir, uncompress_if_gzipped=False):
     return genome_md5
 
 
+def get_fastq_pairs_to_process(project_dir: Path):
+    raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
+    stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
+    stats_parent_dir.mkdir(exist_ok=True, parents=True)
+    raw_reads_dirs = [path for path in raw_reads_parent_dir.iterdir() if path.is_dir()]
+
+    fastq_pairs_to_process = []
+    for raw_reads_dir in raw_reads_dirs:
+        for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
+            fastq_pairs_to_process.append((len(fastq_pairs_to_process), pair))
+    return fastq_pairs_to_process
+
+
 def _run_fastp_minimap(
     project_dir: Path,
     minimap_index: Path,
@@ -383,7 +396,8 @@ def _run_fastp_minimap(
             genome_fasta, project_dir, uncompress_if_gzipped=True
         )
 
-    fastq_pairs_to_process = []
+    fastq_pairs_to_process = get_fastq_pairs_to_process(project_dir)
+
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
         stats_dir = stats_parent_dir / dir_name
@@ -392,9 +406,6 @@ def _run_fastp_minimap(
         crams_dir = crams_parent_dir / dir_name
         if not dry_run:
             crams_dir.mkdir(exist_ok=True)
-
-        for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
-            fastq_pairs_to_process.append((len(fastq_pairs_to_process), pair))
 
     run_fastp_minimap_for_pair = partial(
         _run_fastp_minimap_for_pair,
