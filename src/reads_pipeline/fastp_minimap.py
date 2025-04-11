@@ -563,9 +563,12 @@ def _parse_cram_stats(cram_stats_path):
 
     result["reads properly paired"] = int(summary["reads properly paired"])
     result["reads paired"] = int(summary["reads paired"])
-    result[r"% reads properly paired"] = (
-        result["reads properly paired"] / result["reads paired"] * 100.0
-    )
+    if result["reads paired"]:
+        result[r"% reads properly paired"] = (
+            result["reads properly paired"] / result["reads paired"] * 100.0
+        )
+    else:
+        result[r"% reads properly paired"] = 0.0
     result["inward oriented pairs"] = int(summary["inward oriented pairs"])
     result["outward oriented pairs"] = int(summary["outward oriented pairs"])
     result["insert size average"] = float(summary["insert size average"])
