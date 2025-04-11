@@ -7,6 +7,8 @@ import tempfile
 import json
 from enum import Enum
 
+import pandas
+
 from reads_pipeline.run_cmd import run_cmd
 from reads_pipeline.paths import (
     get_project_dir,
@@ -15,6 +17,9 @@ from reads_pipeline.paths import (
     get_tmp_dir,
     get_gatk_db_dir,
     BCFTOOLS_BIN,
+    get_crams_dir,
+    get_vcfs_per_sample_dir,
+    get_read_group_info_xls,
 )
 
 
@@ -94,6 +99,25 @@ def do_sample_snv_calling_basic_germline(
     cmd.extend(["--mapping-quality-threshold-for-genotyping", str(min_mapq)])
     cmd.extend(["-ERC", "BP_RESOLUTION"])
     run_cmd(cmd, project_dir=project_dir)
+
+
+def do_snv_calling_per_sample(project_dir):
+    base_crams_dir = get_crams_dir(project_dir)
+    base_vcfs_dir = get_vcfs_per_sample_dir(project_dir)
+    group_info = pandas.read_excel(get_read_group_info_xls(project_dir), index_col="id")
+
+    crams_per_sample = defaultdict(list)
+    for bioproject_dir in base_crams_dir.iterdir():
+        cram_id_paths = [
+            (path.name.split(".")[0], path)
+            for path in bioproject_dir.iterdir()
+            if path.suffix == ".cram"
+        ]
+        for id, path in cram_id_paths:
+            sample = group_info.loc[id, "sample"]
+            crams_per_sample[sample].append(path)
+
+    print(crams_per_sample)
 
 
 def _get_sample_names_from_vcf(vcf):
