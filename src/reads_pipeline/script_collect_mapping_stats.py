@@ -21,17 +21,17 @@ def main():
         sys.exit(2)
 
     pairs_to_process = get_fastq_pairs_to_process(project_dir)
-    print("hola")
     print(f"Num. pairs to process: {len(pairs_to_process)}")
+
     fastp_stats = collect_fastp_stats(project_dir=project_dir)
     fastp_stats.to_excel(
         get_reads_stats_fastp_excel_report_path(project_dir), index=False
     )
-    print(fastp_stats.shape)
+    print(f"Num. fastp stats: {fastp_stats.shape[0]}")
 
     cram_stats = collect_cram_stats(project_dir=project_dir)
     stats_dir = get_crams_stats_dir(project_dir)
     stats_dir.mkdir(exist_ok=True)
     stats_path = get_crams_stats_excel_report_path(project_dir)
     cram_stats.to_excel(stats_path, index=False)
-    print(cram_stats.shape)
+    print(f"Num. cram stats: {cram_stats.shape[0]}")

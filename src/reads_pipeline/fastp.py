@@ -93,7 +93,6 @@ def run_fastp(project_dir, min_len=30, deduplicate=False, threads=3, re_run=Fals
 def _parse_fastp_json(path):
     with path.open("rt") as fhand:
         report = json.load(fhand)
-    print(report.keys())
     result = {}
     summary = report["summary"]["before_filtering"]
     result["num_raw_reads"] = summary["total_reads"]
