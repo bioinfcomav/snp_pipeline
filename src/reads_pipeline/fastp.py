@@ -159,7 +159,7 @@ def collect_fastp_stats(project_dir):
     reports = []
     for stats_dir in stats_dirs:
         json_reports = [
-            path for path in stats_dir.iterdir() if path.suffix == ".fastp.json"
+            path for path in stats_dir.iterdir() if str(path).endswith(".fastp.json")
         ]
         for path in json_reports:
             read_report = {}
