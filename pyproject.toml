@@ -16,6 +16,7 @@ dynamic = ["version"]
 [project.scripts]
 run_mapping = "reads_pipeline.script_run_mapping:main"
 check_mapping = "reads_pipeline.script_check_mapping:main"
+collect_mapping_stats = "reads_pipeline.script_collect_mapping_stats:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

@@ -146,14 +146,6 @@ def main():
 
     num_raw_reads_per_pair = count_seqs_in_raw_reads_dir(project_dir)
 
-    res = check_fastqc_stats(project_dir, num_raw_reads_per_pair)
-    fastqc_stats = res["fastqc_stats"]
-    index = [
-        (fastqc_stats_row["dir"], fastqc_stats_row["file_name"].split(".")[0])
-        for _, fastqc_stats_row in fastqc_stats.iterrows()
-    ]
-    fastqc_stats.index = index
-
     fastp_stats = pandas.read_excel(
         get_reads_stats_fastp_excel_report_path(project_dir)
     )
@@ -162,8 +154,6 @@ def main():
         for _, fastp_stats_row in fastp_stats.iterrows()
     ]
     fastp_stats.index = index
-
-    check_num_raw_reads_fastp_vs_fastqc(fastp_stats, fastqc_stats)
 
     cram_stats = pandas.read_excel(get_crams_stats_excel_report_path(project_dir))
     index = [
