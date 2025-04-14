@@ -1,9 +1,9 @@
 [general]
-genome_path = "genome.fa"
+genome_path = "SL4.0ch01_13486265-13488265.fasta"
 #re_run = true
 
 [minimap]
-index_path = "genome.mmi"
+index_path = "SL4.0ch01_13486265-13488265.mmi"
 #num_threads = 20
 
 [trim_quals]
