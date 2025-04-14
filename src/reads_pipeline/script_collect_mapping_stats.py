@@ -12,6 +12,7 @@ from reads_pipeline.paths import (
 )
 from reads_pipeline.fastp_minimap import get_fastq_pairs_to_process, collect_cram_stats
 from reads_pipeline.fastp import collect_fastp_stats
+from reads_pipeline.read_group import get_read_group_info
 
 
 def get_args():
@@ -54,7 +55,8 @@ def main():
         print(msg)
         sys.exit(2)
 
-    pairs_to_process = get_fastq_pairs_to_process(project_dir)
+    read_groups_info = get_read_group_info(project_dir)
+    pairs_to_process = get_fastq_pairs_to_process(project_dir, read_groups_info)
     print(f"Num. pairs to process: {len(pairs_to_process)}")
 
     fastp_stats = collect_fastp_stats(project_dir=project_dir)
