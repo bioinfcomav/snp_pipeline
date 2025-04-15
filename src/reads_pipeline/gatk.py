@@ -7,7 +7,6 @@ import tempfile
 import json
 from enum import Enum
 
-import pandas
 
 from reads_pipeline.run_cmd import run_cmd
 from reads_pipeline.paths import (
@@ -19,9 +18,8 @@ from reads_pipeline.paths import (
     BCFTOOLS_BIN,
     get_crams_dir,
     get_vcfs_per_sample_dir,
-    get_read_group_info_xls,
 )
-
+from reads_pipeline.read_group import get_read_group_info
 
 logger = logging.getLogger(__name__)
 
@@ -101,23 +99,24 @@ def do_sample_snv_calling_basic_germline(
     run_cmd(cmd, project_dir=project_dir)
 
 
+def get_crams(project_dir):
+    base_crams_dir = get_crams_dir(project_dir)
+
+    for path in base_crams_dir.iterdir():
+        if not path.is_dir():
+            continue
+        for cram in path.glob("*.cram"):
+            read_group_id = 
+
+
 def do_snv_calling_per_sample(project_dir):
     base_crams_dir = get_crams_dir(project_dir)
-    base_vcfs_dir = get_vcfs_per_sample_dir(project_dir)
-    group_info = pandas.read_excel(get_read_group_info_xls(project_dir), index_col="id")
+    vcfs_per_sample_dir = get_vcfs_per_sample_dir(project_dir)
+    vcfs_per_sample_dir.mkdir(parents=True, exist_ok=True)
 
-    crams_per_sample = defaultdict(list)
-    for bioproject_dir in base_crams_dir.iterdir():
-        cram_id_paths = [
-            (path.name.split(".")[0], path)
-            for path in bioproject_dir.iterdir()
-            if path.suffix == ".cram"
-        ]
-        for id, path in cram_id_paths:
-            sample = group_info.loc[id, "sample"]
-            crams_per_sample[sample].append(path)
+    group_infos = get_read_group_info(project_dir)
 
-    print(crams_per_sample)
+    get_crams(project_dir)
 
 
 def _get_sample_names_from_vcf(vcf):
