@@ -40,11 +40,23 @@ def test_snv_calling_per_sample():
             deduplicate=False,
         )
 
-        do_snv_calling_per_sample(
+        res = do_snv_calling_per_sample(
             project_dir=project_dir_path, genome_fasta=genome_fasta
         )
-        vcf_path = get_vcfs_per_sample_dir(project_dir) / "sample1.g.vcf.gz"
-        assert vcf_path.exists()
+        assert res["out_vcf_paths_done"]["sample1"].exists()
+        assert len(res["out_vcf_paths_done"]) == 1
+
+        res = do_snv_calling_per_sample(
+            project_dir=project_dir_path, genome_fasta=genome_fasta
+        )
+        assert len(res["out_vcf_paths_done"]) == 0
+
+        res = do_snv_calling_per_sample(
+            project_dir=project_dir_path,
+            genome_fasta=genome_fasta,
+            re_run=True,
+        )
+        assert len(res["out_vcf_paths_done"]) == 1
 
 
 def test_create_genome_reference():

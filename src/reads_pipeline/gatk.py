@@ -103,7 +103,7 @@ def do_sample_snv_calling_basic_germline(
     cmd.extend(["-O", str(out_vcf)])
     cmd.extend(["--mapping-quality-threshold-for-genotyping", str(min_mapq)])
     cmd.extend(["-ERC", "BP_RESOLUTION"])
-    run_cmd(cmd, project_dir=project_dir, verbose=True)
+    run_cmd(cmd, project_dir=project_dir)
 
 
 def get_crams(project_dir):
@@ -121,6 +121,8 @@ def do_snv_calling_per_sample(
     project_dir: Path,
     genome_fasta: Path,
     min_mapq: int = 10,
+    verbose=False,
+    re_run=False,
 ):
     vcfs_per_sample_dir = get_vcfs_per_sample_dir(project_dir)
     vcfs_per_sample_dir.mkdir(parents=True, exist_ok=True)
@@ -137,7 +139,22 @@ def do_snv_calling_per_sample(
         sample = group_infos[read_group_id]["sample"]
         crams_per_sample[sample].append(cram_path)
 
-    for sample, cram_paths in crams_per_sample.items():
+    out_vcf_to_do_per_sample = {}
+    for sample in crams_per_sample.keys():
+        out_vcf = vcfs_per_sample_dir / f"{sample}.g.vcf.gz"
+        if out_vcf.exists():
+            if re_run:
+                os.remove(out_vcf)
+            else:
+                continue
+        out_vcf_to_do_per_sample[sample] = out_vcf
+
+    if verbose:
+        print(f"Num. samples: {len(crams_per_sample)}")
+        print(f"Num. samples/SNV callings to do: {len(out_vcf_to_do_per_sample)}")
+
+    for sample, out_vcf in out_vcf_to_do_per_sample.items():
+        cram_paths = crams_per_sample[sample]
         out_vcf = vcfs_per_sample_dir / f"{sample}.g.vcf.gz"
         with tempfile.TemporaryDirectory(
             prefix="gatk_per_sample", dir=vcfs_per_sample_dir
@@ -151,6 +168,8 @@ def do_snv_calling_per_sample(
                 min_mapq=min_mapq,
             )
             shutil.move(out_tmp_vcf, out_vcf)
+
+    return {"out_vcf_paths_done": out_vcf_to_do_per_sample}
 
 
 def _get_sample_names_from_vcf(vcf):
