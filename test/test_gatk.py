@@ -40,7 +40,11 @@ def test_snv_calling_per_sample():
             deduplicate=False,
         )
 
-        do_snv_calling_per_sample(project_dir=project_dir_path)
+        do_snv_calling_per_sample(
+            project_dir=project_dir_path, genome_fasta=genome_fasta
+        )
+        vcf_path = get_vcfs_per_sample_dir(project_dir) / "sample1.g.vcf.gz"
+        assert vcf_path.exists()
 
 
 def test_create_genome_reference():

@@ -30,7 +30,11 @@ from .paths import (
     remove_file,
 )
 from .run_cmd import run_bash_script, run_cmd
-from .read_group import get_read_group_info, create_minimap_rg_str
+from .read_group import (
+    get_read_group_info,
+    create_minimap_rg_str,
+    get_read_group_id_from_path,
+)
 from .utils_file_system import move_files_and_dirs
 
 logger = logging.getLogger(__name__)
@@ -331,7 +335,7 @@ def _get_text_file_md5(genome_fasta, project_dir, uncompress_if_gzipped=False):
 
 
 def _get_read_group_id_from_fastq_pair_paths(pair_paths: list[Path]):
-    return pair_paths[0].name.split(".")[0]
+    return get_read_group_id_from_path(pair_paths[0])
 
 
 def get_fastq_pairs_to_process(project_dir: Path, read_groups_info: dict):

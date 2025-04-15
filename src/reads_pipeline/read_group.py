@@ -51,3 +51,7 @@ def create_minimap_rg_str(read_id: str, read_group_info: dict, project_dir):
     if read_group_info.get("library", ""):
         rg_str += f"\\\\tPL:{read_group_info['library']}"
     return rg_str
+
+
+def get_read_group_id_from_path(path):
+    return path.name.split(".")[0]
