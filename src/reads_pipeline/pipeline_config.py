@@ -4,7 +4,12 @@ import tomllib
 from reads_pipeline.paths import get_config_path
 
 DEFAULTS = {
-    "general": {"re_run": False, "verbose": True, "num_mappings_in_parallel": 1},
+    "general": {
+        "re_run": False,
+        "verbose": True,
+        "num_mappings_in_parallel": 1,
+        "num_snvs_in_parallel": 1,
+    },
     "fastp": {
         "min_read_len": 30,
         "num_threads": 3,
@@ -22,6 +27,7 @@ DEFAULTS = {
         "samtools_stats_num_threads": 4,
     },
     "fastqc": {"num_threads": 6},
+    "gatk": {"per_sample_calling_min_mapq": 10},
 }
 
 
@@ -33,6 +39,9 @@ class PipelineConfig:
 
         with config_path.open("rb") as fhand:
             config = tomllib.load(fhand)
+
+        if "gatk" not in config:
+            config["gatk"] = {}
 
         self._config = config
 
