@@ -41,22 +41,24 @@ def test_snv_calling_per_sample():
         )
 
         res = do_snv_calling_per_sample(
-            project_dir=project_dir_path, genome_fasta=genome_fasta
+            project_dir=project_dir_path,
+            genome_fasta=genome_fasta,
+            num_snvs_in_parallel=2,
         )
-        assert res["out_vcf_paths_done"]["sample1"].exists()
-        assert len(res["out_vcf_paths_done"]) == 1
+        assert res["samples_done"]["sample1"]["out_vcf"].exists()
+        assert len(res["samples_done"]) == 1
 
         res = do_snv_calling_per_sample(
             project_dir=project_dir_path, genome_fasta=genome_fasta
         )
-        assert len(res["out_vcf_paths_done"]) == 0
+        assert len(res["samples_done"]) == 0
 
         res = do_snv_calling_per_sample(
             project_dir=project_dir_path,
             genome_fasta=genome_fasta,
             re_run=True,
         )
-        assert len(res["out_vcf_paths_done"]) == 1
+        assert len(res["samples_done"]) == 1
 
 
 def test_create_genome_reference():
