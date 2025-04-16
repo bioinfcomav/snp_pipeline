@@ -3,7 +3,12 @@ import shutil
 from pathlib import Path
 from subprocess import run
 
-from .config import TEST_PROJECT2_DIR, TEST_PROJECT5_DIR
+from .config import (
+    TEST_PROJECT2_DIR,
+    TEST_PROJECT5_DIR,
+    TEST_PROJECT6_DIR,
+    PROJECT6_GENOME_FAI,
+)
 from reads_pipeline.gatk import (
     create_genome_reference,
     do_sample_snv_calling_basic_germline,
@@ -14,8 +19,7 @@ from reads_pipeline.gatk import (
     do_snv_calling_per_sample,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap_for_fastqs
-
-from reads_pipeline.paths import MINIMAP2_BIN
+from reads_pipeline.paths import MINIMAP2_BIN, get_vcfs_per_sample_dir
 
 
 def _prepare_snv_calling_test_dir(project_dir):
@@ -79,6 +83,23 @@ def test_per_sample_snv_calling_script():
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)
+
+
+def test_add_sample_snv_calls_to_db():
+    with tempfile.TemporaryDirectory(prefix="gatk_db_test") as project_dir:
+        project_dir_path = Path(project_dir)
+        shutil.copytree(TEST_PROJECT6_DIR, project_dir_path, dirs_exist_ok=True)
+        vcfs = [
+            path
+            for path in get_vcfs_per_sample_dir(project_dir_path).iterdir()
+            if str(path).endswith(".vcf.gz")
+        ]
+        create_db_with_independent_sample_snv_calls(
+            vcfs,
+            project_dir=project_dir_path,
+            genome_fai_path=PROJECT6_GENOME_FAI,
+            mode=GATKDBFileMode.CREATE,
+        )
 
 
 def test_create_genome_reference():
