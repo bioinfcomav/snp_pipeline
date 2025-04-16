@@ -17,6 +17,7 @@ dynamic = ["version"]
 run_mapping = "reads_pipeline.script_run_mapping:main"
 collect_mapping_stats = "reads_pipeline.script_collect_mapping_stats:main"
 do_per_sample_snv_calling = "reads_pipeline.script_do_per_sample_snv_calling:main"
+create_gatk_db = "reads_pipeline.script_create_gatk_db:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

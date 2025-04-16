@@ -104,6 +104,19 @@ def test_add_sample_snv_calls_to_db():
         assert samples_in_db == ["sample1"]
 
 
+def test_create_gatk_db_script():
+    with tempfile.TemporaryDirectory(prefix="gatk_db_test") as project_dir:
+        project_dir_path = Path(project_dir)
+        shutil.copytree(TEST_PROJECT6_DIR, project_dir_path, dirs_exist_ok=True)
+        cmd = [
+            "uv",
+            "run",
+            "create_gatk_db",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)
+
+
 def test_create_genome_reference():
     with tempfile.TemporaryDirectory(prefix="gatk_test") as project_dir:
         project_dir_path = Path(project_dir)

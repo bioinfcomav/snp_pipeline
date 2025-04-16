@@ -27,7 +27,12 @@ DEFAULTS = {
         "samtools_stats_num_threads": 4,
     },
     "fastqc": {"num_threads": 6},
-    "gatk": {"per_sample_calling_min_mapq": 10, "num_threads_tabix": 4},
+    "gatk": {
+        "per_sample_calling_min_mapq": 10,
+        "num_threads_tabix": 4,
+        "db_creation_batch_size": 50,
+        "db_creation_reader_threads": 4,
+    },
 }
 
 

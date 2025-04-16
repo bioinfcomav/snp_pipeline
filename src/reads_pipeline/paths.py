@@ -166,6 +166,11 @@ def get_vcfs_per_sample_dir(project_dir) -> Path:
     return path
 
 
+def get_per_sample_vcfs(project_dir) -> list[Path]:
+    vcf_dir = get_vcfs_per_sample_dir(project_dir)
+    return [path for path in vcf_dir.iterdir() if str(path).endswith(".vcf.gz")]
+
+
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
 
