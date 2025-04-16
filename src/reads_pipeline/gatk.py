@@ -21,6 +21,7 @@ from reads_pipeline.paths import (
     BCFTOOLS_BIN,
     get_crams_dir,
     get_vcfs_per_sample_dir,
+    TABIX_BIN,
 )
 from reads_pipeline.read_group import get_read_group_info, get_read_group_id_from_path
 
@@ -119,8 +120,37 @@ def get_crams(project_dir):
     return cram_paths
 
 
+def create_tabix_path_from_vcf(vcf_path):
+    return Path(str(vcf_path) + ".tbi")
+
+
+def _index_vcf(vcf_path, project_dir, num_threads=0, re_run=False):
+    tabix_path = create_tabix_path_from_vcf(vcf_path)
+    if tabix_path.exists():
+        if re_run:
+            os.remove(tabix_path)
+        else:
+            return tabix_path
+
+    cmd = [TABIX_BIN]
+    if num_threads:
+        cmd.append(f"-@{num_threads}")
+    cmd.append(str(vcf_path))
+    run_cmd(cmd, project_dir=project_dir, verbose=True)
+
+    if not tabix_path.exists():
+        raise RuntimeError("tabix indexing run but tbi not found: {tabix_path}")
+    return tabix_path
+
+
 def _do_snv_calling_for_sample(
-    sample_info, vcfs_per_sample_dir, genome_fasta, project_dir, min_mapq
+    sample_info,
+    vcfs_per_sample_dir,
+    genome_fasta,
+    project_dir,
+    min_mapq,
+    tabix_num_threads,
+    re_run,
 ):
     cram_paths = sample_info["cram_paths"]
     out_vcf = sample_info["out_vcf"]
@@ -135,7 +165,12 @@ def _do_snv_calling_for_sample(
             project_dir=project_dir,
             min_mapq=min_mapq,
         )
+        vcf_tmp_index = _index_vcf(
+            out_tmp_vcf, project_dir, num_threads=tabix_num_threads, re_run=re_run
+        )
+        vcf_index = create_tabix_path_from_vcf(out_vcf)
         shutil.move(out_tmp_vcf, out_vcf)
+        shutil.move(vcf_tmp_index, vcf_index)
 
 
 def do_snv_calling_per_sample(
@@ -145,6 +180,7 @@ def do_snv_calling_per_sample(
     verbose=False,
     re_run=False,
     num_snvs_in_parallel=1,
+    tabix_num_threads=0,
 ):
     vcfs_per_sample_dir = get_vcfs_per_sample_dir(project_dir)
     vcfs_per_sample_dir.mkdir(parents=True, exist_ok=True)
@@ -188,6 +224,8 @@ def do_snv_calling_per_sample(
         genome_fasta=genome_fasta,
         project_dir=project_dir,
         min_mapq=min_mapq,
+        tabix_num_threads=tabix_num_threads,
+        re_run=re_run,
     )
 
     if num_snvs_in_parallel > 1:
