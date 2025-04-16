@@ -100,6 +100,8 @@ def test_add_sample_snv_calls_to_db():
             genome_fai_path=PROJECT6_GENOME_FAI,
             mode=GATKDBFileMode.CREATE,
         )
+        samples_in_db = get_samples_in_gatk_db(project_dir)
+        assert samples_in_db == ["sample1"]
 
 
 def test_create_genome_reference():
