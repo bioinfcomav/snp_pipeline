@@ -29,6 +29,7 @@ def main():
         num_snvs_in_parallel=config["general"]["num_snvs_in_parallel"],
         min_mapq=config["gatk"]["per_sample_calling_min_mapq"],
         genome_fasta=config["general"]["genome_path"],
+        tabix_num_threads=config["gatk"]["num_threads_tabix"],
     )
 
 
