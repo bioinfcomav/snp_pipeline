@@ -6,8 +6,10 @@ from collections import defaultdict
 import tempfile
 import json
 from enum import Enum
+import shutil
+from functools import partial
+from multiprocessing import Pool
 
-import pandas
 
 from reads_pipeline.run_cmd import run_cmd
 from reads_pipeline.paths import (
@@ -19,9 +21,8 @@ from reads_pipeline.paths import (
     BCFTOOLS_BIN,
     get_crams_dir,
     get_vcfs_per_sample_dir,
-    get_read_group_info_xls,
 )
-
+from reads_pipeline.read_group import get_read_group_info, get_read_group_id_from_path
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,12 @@ def do_sample_snv_calling_basic_germline(
     if not out_vcf.suffix == ".gz" and not allow_uncompressed_vcf:
         raise ValueError("Output VCF must have a .gz suffix")
 
+    fasta_dict_path = genome_fasta.with_suffix(".dict")
+    if not fasta_dict_path.exists():
+        raise ValueError(
+            f"Missing dict file for genome fasta, please create it with GATK: {fasta_dict_path}"
+        )
+
     tmp_dir = get_tmp_dir(project_dir)
     tmp_dir.mkdir(exist_ok=True)
     cmd = [
@@ -101,23 +108,96 @@ def do_sample_snv_calling_basic_germline(
     run_cmd(cmd, project_dir=project_dir)
 
 
-def do_snv_calling_per_sample(project_dir):
+def get_crams(project_dir):
     base_crams_dir = get_crams_dir(project_dir)
-    base_vcfs_dir = get_vcfs_per_sample_dir(project_dir)
-    group_info = pandas.read_excel(get_read_group_info_xls(project_dir), index_col="id")
 
-    crams_per_sample = defaultdict(list)
-    for bioproject_dir in base_crams_dir.iterdir():
-        cram_id_paths = [
-            (path.name.split(".")[0], path)
-            for path in bioproject_dir.iterdir()
-            if path.suffix == ".cram"
-        ]
-        for id, path in cram_id_paths:
-            sample = group_info.loc[id, "sample"]
-            crams_per_sample[sample].append(path)
+    cram_paths = []
+    for path in base_crams_dir.iterdir():
+        if not path.is_dir():
+            continue
+        cram_paths.extend(path.glob("*.cram"))
+    return cram_paths
 
-    print(crams_per_sample)
+
+def _do_snv_calling_for_sample(
+    sample_info, vcfs_per_sample_dir, genome_fasta, project_dir, min_mapq
+):
+    cram_paths = sample_info["cram_paths"]
+    out_vcf = sample_info["out_vcf"]
+    with tempfile.TemporaryDirectory(
+        prefix="gatk_per_sample", dir=vcfs_per_sample_dir
+    ) as tmp_dir:
+        out_tmp_vcf = Path(tmp_dir) / out_vcf.name
+        do_sample_snv_calling_basic_germline(
+            genome_fasta=genome_fasta,
+            bams=cram_paths,
+            out_vcf=out_tmp_vcf,
+            project_dir=project_dir,
+            min_mapq=min_mapq,
+        )
+        shutil.move(out_tmp_vcf, out_vcf)
+
+
+def do_snv_calling_per_sample(
+    project_dir: Path,
+    genome_fasta: Path,
+    min_mapq: int = 10,
+    verbose=False,
+    re_run=False,
+    num_snvs_in_parallel=1,
+):
+    vcfs_per_sample_dir = get_vcfs_per_sample_dir(project_dir)
+    vcfs_per_sample_dir.mkdir(parents=True, exist_ok=True)
+
+    group_infos = get_read_group_info(project_dir)
+
+    cram_paths = get_crams(project_dir)
+
+    infos_per_sample = {}
+    for cram_path in cram_paths:
+        read_group_id = get_read_group_id_from_path(cram_path)
+        if read_group_id not in group_infos:
+            raise ValueError(f"Missing read group info for {read_group_id}")
+        sample = group_infos[read_group_id]["sample"]
+        if sample not in infos_per_sample:
+            infos_per_sample[sample] = {"cram_paths": []}
+        infos_per_sample[sample]["cram_paths"].append(cram_path)
+
+    for sample in infos_per_sample.keys():
+        out_vcf = vcfs_per_sample_dir / f"{sample}.g.vcf.gz"
+        if out_vcf.exists():
+            if re_run:
+                os.remove(out_vcf)
+            else:
+                continue
+        infos_per_sample[sample]["out_vcf"] = out_vcf
+
+    if verbose:
+        print(f"Num. samples: {len(infos_per_sample)}")
+    sample_infos_todo = {
+        sample: sample_info
+        for sample, sample_info in infos_per_sample.items()
+        if "out_vcf" in sample_info
+    }
+    if verbose:
+        print(f"Num. samples/SNV callings to do: {len(sample_infos_todo)}")
+
+    do_snv_calling_for_sample = partial(
+        _do_snv_calling_for_sample,
+        vcfs_per_sample_dir=vcfs_per_sample_dir,
+        genome_fasta=genome_fasta,
+        project_dir=project_dir,
+        min_mapq=min_mapq,
+    )
+
+    if num_snvs_in_parallel > 1:
+        with Pool(4) as pool:
+            res = pool.map(do_snv_calling_for_sample, sample_infos_todo.values())
+    else:
+        res = map(do_snv_calling_for_sample, sample_infos_todo.values())
+    list(res)
+
+    return {"samples_done": sample_infos_todo}
 
 
 def _get_sample_names_from_vcf(vcf):

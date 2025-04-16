@@ -20,7 +20,6 @@ from .paths import (
     get_paired_and_unpaired_read_files_in_dir,
     get_crams_dir,
     get_crams_stats_dir,
-    get_crams_stats_excel_report_path,
     FASTP_BIN,
     MINIMAP2_BIN,
     SAMTOOLS_BIN,
@@ -31,7 +30,11 @@ from .paths import (
     remove_file,
 )
 from .run_cmd import run_bash_script, run_cmd
-from .read_group import get_read_group_info, create_minimap_rg_str
+from .read_group import (
+    get_read_group_info,
+    create_minimap_rg_str,
+    get_read_group_id_from_path,
+)
 from .utils_file_system import move_files_and_dirs
 
 logger = logging.getLogger(__name__)
@@ -107,7 +110,7 @@ TRIM_QUALS_LINE = (
 
 
 def _run_fastp_minimap_for_pair(
-    idx_pair: tuple[int, tuple[Path]],
+    read_group: dict,
     project_dir: Path,
     stats_dir: Path,
     crams_dir: Path,
@@ -134,7 +137,10 @@ def _run_fastp_minimap_for_pair(
     dry_run: bool,
     num_analyses_to_do: int,
 ):
-    pair_idx, pair = idx_pair
+    read_group_idx = read_group["idx"]
+    read_group_id = read_group["read_group_id"]
+    fastq_paths = read_group["fastq_paths"]
+
     if not dry_run:
         logging.basicConfig(
             filename=get_log_path(project_dir),
@@ -142,21 +148,15 @@ def _run_fastp_minimap_for_pair(
             level=logging.INFO,
             force=True,
         )
-    read_id = pair[0].name.split(".")[0]
-    excel_file = get_read_group_info_xls(project_dir)
-    if read_id not in read_groups_info:
-        msg = f"The read group {read_id} does not have read group info in the excel file: {excel_file}"
-        logging.error(msg)
-        raise ValueError(msg)
     rg_str = create_minimap_rg_str(
-        read_id, read_groups_info[read_id], project_dir, excel_file
+        read_group_id, read_groups_info[read_group_id], project_dir
     )
 
-    if len(pair) == 2:
-        fastp_in1 = f"--in1 {pair[0]}"
-        fastp_in2 = f"--in2 {pair[1]}"
-    elif len(pair) == 1:
-        fastp_in1 = f"--in1 {pair[0]}"
+    if len(fastq_paths) == 2:
+        fastp_in1 = f"--in1 {fastq_paths[0]}"
+        fastp_in2 = f"--in2 {fastq_paths[1]}"
+    elif len(fastq_paths) == 1:
+        fastp_in1 = f"--in1 {fastq_paths[0]}"
         fastp_in2 = ""
     fastp_gobal_trim = ""
     if fastp_trim_front1:
@@ -182,25 +182,31 @@ def _run_fastp_minimap_for_pair(
 
         tmp_dir = tempfile.TemporaryDirectory(prefix="tmp_dir_", dir=crams_tmp_dir)
 
-        html_report_path = stats_dir / (pair[0].with_suffix("").name + ".fastp.html")
-        json_report_path = stats_dir / (pair[0].with_suffix("").name + ".fastp.json")
+        html_report_path = stats_dir / (
+            fastq_paths[0].with_suffix("").name + ".fastp.html"
+        )
+        json_report_path = stats_dir / (
+            fastq_paths[0].with_suffix("").name + ".fastp.json"
+        )
         html_report_tmp_path = crams_tmp_dir_path / html_report_path.name
         json_report_tmp_path = crams_tmp_dir_path / json_report_path.name
         seq_stats_report_path = stats_dir / (
-            pair[0].with_suffix("").name + ".seq_stats.json"
+            fastq_paths[0].with_suffix("").name + ".seq_stats.json"
         )
         seq_stats_report_tmp_path = crams_tmp_dir_path / seq_stats_report_path.name
 
-        cram_path = crams_dir / (pair[0].name.removesuffix(".fastq.gz") + ".cram")
+        cram_path = crams_dir / (
+            fastq_paths[0].name.removesuffix(".fastq.gz") + ".cram"
+        )
         cram_tmp_path = crams_tmp_dir_path / (
-            pair[0].name.removesuffix(".fastq.gz") + ".cram"
+            fastq_paths[0].name.removesuffix(".fastq.gz") + ".cram"
         )
 
         cram_stats_path = crams_dir / (
-            pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
+            fastq_paths[0].name.removesuffix(".fastq.gz") + ".cram.stats"
         )
         cram_stats_tmp_path = crams_tmp_dir_path / (
-            pair[0].name.removesuffix(".fastq.gz") + ".cram.stats"
+            fastq_paths[0].name.removesuffix(".fastq.gz") + ".cram.stats"
         )
 
         if re_run:
@@ -225,12 +231,13 @@ def _run_fastp_minimap_for_pair(
 
         if not dry_run:
             logging.info(
-                "Running fastp-minimap pipeline for files: " + " ".join(map(str, pair))
+                "Running fastp-minimap pipeline for files: "
+                + " ".join(map(str, fastq_paths))
             )
         if verbose and not dry_run:
-            pair_str = ", ".join(map(str, pair))
+            pair_str = ", ".join(map(str, fastq_paths))
             print(
-                f"Cleaning and mapping read pair with idx: {pair_idx}, total to process: {num_analyses_to_do} : {pair_str}"
+                f"Cleaning and mapping read pair with idx: {read_group_idx}, total to process: {num_analyses_to_do} : {pair_str}"
             )
 
         if deduplicate:
@@ -327,6 +334,44 @@ def _get_text_file_md5(genome_fasta, project_dir, uncompress_if_gzipped=False):
     return genome_md5
 
 
+def _get_read_group_id_from_fastq_pair_paths(pair_paths: list[Path]):
+    return get_read_group_id_from_path(pair_paths[0])
+
+
+def get_fastq_pairs_to_process(project_dir: Path, read_groups_info: dict):
+    raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
+    stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
+    stats_parent_dir.mkdir(exist_ok=True, parents=True)
+    raw_reads_dirs = [path for path in raw_reads_parent_dir.iterdir() if path.is_dir()]
+
+    fastq_pairs_to_process = []
+    read_groups_so_far = set()
+    for raw_reads_dir in raw_reads_dirs:
+        for fastq_pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
+            read_group_id = _get_read_group_id_from_fastq_pair_paths(fastq_pair)
+
+            if read_group_id in read_groups_so_far:
+                msg = f"Duplicate read group id found in fastq files: {read_group_id}"
+                raise RuntimeError(msg)
+            read_groups_so_far.add(read_group_id)
+
+            if read_group_id not in read_groups_info:
+                read_group_info_excel = get_read_group_info_xls(project_dir)
+                msg = f"The read group {read_group_id} does not have read group info in the read group info excel file: {read_group_info_excel}"
+                logging.error(msg)
+                raise ValueError(msg)
+
+            fastq_pairs_to_process.append(
+                {
+                    "idx": len(fastq_pairs_to_process) + 1,
+                    "read_group_id": read_group_id,
+                    "fastq_paths": fastq_pair,
+                }
+            )
+
+    return fastq_pairs_to_process
+
+
 def _run_fastp_minimap(
     project_dir: Path,
     minimap_index: Path,
@@ -383,7 +428,8 @@ def _run_fastp_minimap(
             genome_fasta, project_dir, uncompress_if_gzipped=True
         )
 
-    fastq_pairs_to_process = []
+    fastq_pairs_to_process = get_fastq_pairs_to_process(project_dir, read_groups_info)
+
     for raw_reads_dir in raw_reads_dirs:
         dir_name = raw_reads_dir.name
         stats_dir = stats_parent_dir / dir_name
@@ -392,9 +438,6 @@ def _run_fastp_minimap(
         crams_dir = crams_parent_dir / dir_name
         if not dry_run:
             crams_dir.mkdir(exist_ok=True)
-
-        for pair in get_paired_and_unpaired_read_files_in_dir(raw_reads_dir):
-            fastq_pairs_to_process.append((len(fastq_pairs_to_process), pair))
 
     run_fastp_minimap_for_pair = partial(
         _run_fastp_minimap_for_pair,
@@ -552,9 +595,12 @@ def _parse_cram_stats(cram_stats_path):
 
     result["reads properly paired"] = int(summary["reads properly paired"])
     result["reads paired"] = int(summary["reads paired"])
-    result[r"% reads properly paired"] = (
-        result["reads properly paired"] / result["reads paired"] * 100.0
-    )
+    if result["reads paired"]:
+        result[r"% reads properly paired"] = (
+            result["reads properly paired"] / result["reads paired"] * 100.0
+        )
+    else:
+        result[r"% reads properly paired"] = 0.0
     result["inward oriented pairs"] = int(summary["inward oriented pairs"])
     result["outward oriented pairs"] = int(summary["outward oriented pairs"])
     result["insert size average"] = float(summary["insert size average"])
@@ -580,10 +626,7 @@ def collect_cram_stats(project_dir):
         results.append({"dir": crams_dir_name} | _parse_cram_stats(cram_stats_path))
     results = pandas.DataFrame(results)
 
-    stats_dir = get_crams_stats_dir(project_dir)
-    stats_dir.mkdir(exist_ok=True)
-    stats_path = get_crams_stats_excel_report_path(project_dir)
-    results.to_excel(stats_path, index=False)
+    return results
 
 
 def _get_cram_stat_paths(project_dir):

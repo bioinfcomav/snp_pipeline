@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from subprocess import run
 
-from .config import TEST_PROJECT2_DIR
+from .config import TEST_PROJECT2_DIR, TEST_PROJECT5_DIR
 from reads_pipeline.gatk import (
     create_genome_reference,
     do_sample_snv_calling_basic_germline,
@@ -11,10 +11,74 @@ from reads_pipeline.gatk import (
     get_samples_in_gatk_db,
     GATKDBFileMode,
     do_svn_joint_genotyping_for_all_samples_together,
+    do_snv_calling_per_sample,
 )
-from reads_pipeline.fastp_minimap import run_fastp_minimap
+from reads_pipeline.fastp_minimap import run_fastp_minimap_for_fastqs
 
-from reads_pipeline.paths import MINIMAP2_BIN, get_vcfs_for_bams_dir
+from reads_pipeline.paths import MINIMAP2_BIN
+
+
+def _prepare_snv_calling_test_dir(project_dir):
+    project_dir_path = Path(project_dir)
+    shutil.copytree(TEST_PROJECT5_DIR, project_dir, dirs_exist_ok=True)
+    genome_fasta = TEST_PROJECT5_DIR / "SL4.0ch01_13486265-13488265.fasta"
+    snv_calling_dir = project_dir_path / "snv_calling"
+    snv_calling_dir.mkdir()
+
+    res = create_genome_reference(genome_fasta, snv_calling_dir, project_dir_path)
+    genome_reference_path = res["genome_path"]
+
+    minimap_index = genome_reference_path.with_suffix(".mmi")
+    cmd = [MINIMAP2_BIN, "-d", str(minimap_index), str(genome_reference_path)]
+    run(cmd, capture_output=True, check=True)
+
+    res = run_fastp_minimap_for_fastqs(
+        project_dir=project_dir_path,
+        minimap_index=minimap_index,
+        genome_fasta=genome_reference_path,
+        deduplicate=False,
+    )
+    return {
+        "genome_fasta": genome_fasta,
+    }
+
+
+def test_snv_calling_per_sample():
+    with tempfile.TemporaryDirectory(prefix="gatk_test") as project_dir:
+        res = _prepare_snv_calling_test_dir(project_dir)
+        genome_fasta = res["genome_fasta"]
+        project_dir_path = Path(project_dir)
+        res = do_snv_calling_per_sample(
+            project_dir=project_dir_path,
+            genome_fasta=genome_fasta,
+            num_snvs_in_parallel=2,
+        )
+        assert res["samples_done"]["sample1"]["out_vcf"].exists()
+        assert len(res["samples_done"]) == 1
+
+        res = do_snv_calling_per_sample(
+            project_dir=project_dir_path, genome_fasta=genome_fasta
+        )
+        assert len(res["samples_done"]) == 0
+
+        res = do_snv_calling_per_sample(
+            project_dir=project_dir_path,
+            genome_fasta=genome_fasta,
+            re_run=True,
+        )
+        assert len(res["samples_done"]) == 1
+
+
+def test_per_sample_snv_calling_script():
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        _prepare_snv_calling_test_dir(project_dir)
+        cmd = [
+            "uv",
+            "run",
+            "do_per_sample_snv_calling",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)
 
 
 def test_create_genome_reference():

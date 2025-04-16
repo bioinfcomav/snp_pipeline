@@ -8,7 +8,6 @@ from .paths import (
     get_raw_reads_parent_dir,
     get_clean_reads_parent_dir,
     get_reads_stats_fastp_parent_dir,
-    get_reads_stats_fastp_excel_report_path,
     FASTP_BIN,
     remove_file,
 )
@@ -94,7 +93,6 @@ def run_fastp(project_dir, min_len=30, deduplicate=False, threads=3, re_run=Fals
 def _parse_fastp_json(path):
     with path.open("rt") as fhand:
         report = json.load(fhand)
-    print(report.keys())
     result = {}
     summary = report["summary"]["before_filtering"]
     result["num_raw_reads"] = summary["total_reads"]
@@ -102,7 +100,10 @@ def _parse_fastp_json(path):
     result["raw_q20"] = summary["q20_rate"]
     result["raw_q30"] = summary["q30_rate"]
     result["raw_read1_mean_length"] = summary["read1_mean_length"]
-    result["raw_read2_mean_length"] = summary["read2_mean_length"]
+    if "read2_mean_length" in summary:
+        result["raw_read2_mean_length"] = summary["read2_mean_length"]
+    else:
+        result["raw_read2_mean_length"] = 0
 
     if "after_filtering" in report["summary"]:
         summary = report["summary"]["after_filtering"]
@@ -111,7 +112,10 @@ def _parse_fastp_json(path):
         result["clean_q20"] = summary["q20_rate"]
         result["clean_q30"] = summary["q30_rate"]
         result["clean_read1_mean_length"] = summary["read1_mean_length"]
-        result["clean_read2_mean_length"] = summary["read2_mean_length"]
+        if "read2_mean_length" in summary:
+            result["clean_read2_mean_length"] = summary["read2_mean_length"]
+        else:
+            result["clean_read2_mean_length"] = 0
 
     if "filtering_results" in report:
         summary = report["filtering_results"]
@@ -140,6 +144,9 @@ def _parse_fastp_json(path):
             report["read2_before_filtering"]["q30_bases"]
             / report["read2_before_filtering"]["total_bases"]
         )
+    else:
+        result["raw_read2_q30"] = 0
+
     if "read1_after_filtering" in report:
         result["clean_read1_q30"] = (
             report["read1_after_filtering"]["q30_bases"]
@@ -150,6 +157,8 @@ def _parse_fastp_json(path):
             report["read2_after_filtering"]["q30_bases"]
             / report["read2_after_filtering"]["total_bases"]
         )
+    else:
+        result["clean_read2_q30"] = 0
 
     return result
 
@@ -160,7 +169,7 @@ def collect_fastp_stats(project_dir):
     reports = []
     for stats_dir in stats_dirs:
         json_reports = [
-            path for path in stats_dir.iterdir() if path.suffix == ".fastp.json"
+            path for path in stats_dir.iterdir() if str(path).endswith(".fastp.json")
         ]
         for path in json_reports:
             read_report = {}
@@ -169,4 +178,4 @@ def collect_fastp_stats(project_dir):
             read_report |= _parse_fastp_json(path)
             reports.append(read_report)
     dframe = pandas.DataFrame(reports)
-    dframe.to_excel(get_reads_stats_fastp_excel_report_path(project_dir), index=False)
+    return dframe
