@@ -18,6 +18,7 @@ from reads_pipeline.gatk import (
     GATKDBFileMode,
     do_svn_joint_genotyping_for_all_samples_together,
     do_snv_calling_per_sample,
+    filter_vcf_with_gatk,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap_for_fastqs
 from reads_pipeline.paths import MINIMAP2_BIN, get_vcfs_per_sample_dir
@@ -107,6 +108,22 @@ def test_add_sample_snv_calls_to_db():
         joint_vcf = project_dir_path / "joint.vcf.gz"
         do_svn_joint_genotyping_for_all_samples_together(
             project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, out_vcf=joint_vcf
+        )
+        filtered_vcf = project_dir_path / "joint.filtered.vcf.gz"
+        filters = {
+            "QD2": "QD < 2.0",  # Quality by Depth
+            "FS60": "FS > 60.0",  # Fisher Strand Bias
+            "MQ40": "MQ < 40.0",  # Mapping Quality
+            "MQRankSum": "MQRankSum < -12.5",  # Mapping Quality Rank Sum
+            "ReadPosRankSum": "ReadPosRankSum < -20.0",  # Mapping Quality Rank Sum
+        }
+
+        filter_vcf_with_gatk(
+            joint_vcf,
+            filtered_vcf,
+            genome_fasta=PROJECT6_GENOME_FASTA,
+            filters=filters,
+            project_dir=project_dir,
         )
 
         cmd = [

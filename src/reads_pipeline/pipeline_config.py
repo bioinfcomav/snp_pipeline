@@ -33,6 +33,7 @@ DEFAULTS = {
         "db_creation_batch_size": 50,
         "db_creation_reader_threads": 4,
     },
+    "gatk_filters": {},
 }
 
 

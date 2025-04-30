@@ -357,9 +357,6 @@ def do_svn_joint_genotyping_for_all_samples_together(
     if not out_vcf.suffix == ".gz" and not allow_uncompressed_vcf:
         raise ValueError("Output VCF must have a .gz suffix")
 
-    if out_vcf.exists():
-        raise ValueError(f"GATK joint VCF already exists: {out_vcf}")
-
     db_dir = get_gatk_db_dir(project_dir)
     cmd = [
         "uv",
@@ -377,74 +374,55 @@ def do_svn_joint_genotyping_for_all_samples_together(
     run_cmd(cmd, project_dir=project_dir)
 
 
+def filter_vcf_with_gatk(in_vcf, out_vcf, genome_fasta, filters, project_dir):
+    cmd = [
+        "uv",
+        "run",
+        str(GATK_PYTHON_BIN),
+        "VariantFiltration",
+        "--reference",
+        str(genome_fasta),
+        "--variant",
+        str(in_vcf),
+        "--output",
+        str(out_vcf),
+    ]
+    for filter_name, filter_expression in filters.items():
+        cmd.extend(
+            (
+                "--filter-expression",
+                filter_expression,
+                "--filter-name",
+                filter_name,
+            )
+        )
+    run_cmd(cmd, project_dir=project_dir)
+
+
 def filter_and_merge_variants(project_dir: Path, in_vcf: Path, verbose=False):
     """
-# Filter Out Low-Quality Variants (Hard Filtering)
 
-Since you cannot use VariantRecalibrator, you will apply hard filtering with VariantFiltration.
-Filtering SNPs
+    # Merge SNPs and Indels into Complex Variants
 
-gatk VariantFiltration \
-    -R reference.fasta \
-    -V raw_variants.vcf.gz \
-    -O filtered_SNPs.vcf.gz \
-    --filter-expression "QD < 2.0" --filter-name "QD2" \
-    --filter-expression "FS > 60.0" --filter-name "FS60" \
-    --filter-expression "MQ < 40.0" --filter-name "MQ40" \
-    --filter-expression "MQRankSum < -12.5" --filter-name "MQRankSum" \
-    --filter-expression "ReadPosRankSum < -8.0" --filter-name "ReadPosRankSum"
+    To combine adjacent SNPs and indels into haplotypes and complex alleles, use bcftools norm:
 
-Explanation of Filters
+    bcftools norm -m +any -f reference.fasta filtered_variants.vcf.gz -O z -o final_variants.vcf.gz
 
-    Quality by Depth (QD < 2.0) → Low confidence variants.
-    Fisher Strand Bias (FS > 60.0) → Highly biased variants.
-    Mapping Quality (MQ < 40.0) → Low mapping confidence.
-    Mapping Quality Rank Sum (MQRankSum < -12.5) → Bad read alignments.
-    Read Position Bias (ReadPosRankSum < -8.0) → Potential alignment artifacts.
+        --multiallelics+both → join biallelic sites into multiallelic records, merges SNPs and indels into complex variants.
+        --fasta-ref reference.fasta → Uses the reference genome to correct alleles.
+        --check-ref e
+        --collapse both
+        --output FILE
+        --output-type z → compressed VCF (.vcf.gz)
+        --threads INT
+        --write-index
 
-This step removes low-confidence SNPs based on their quality metrics.
-Filtering Indels
+    # Validate the Final VCF
 
-Indels often have different quality metrics, so we use slightly different criteria:
+    Validate the VCF to ensure correct formatting
 
-gatk VariantFiltration \
-    -R reference.fasta \
-    -V filtered_SNPs.vcf.gz \
-    -O filtered_variants.vcf.gz \
-    --filter-expression "QD < 2.0" --filter-name "QD2" \
-    --filter-expression "FS > 200.0" --filter-name "FS200" \
-    --filter-expression "ReadPosRankSum < -20.0" --filter-name "ReadPosRankSum"
-
-    FS cutoff is higher (FS > 200.0) because indels are more prone to strand bias.
-    Read position bias cutoff is stricter (ReadPosRankSum < -20.0).
-
-Now, you have a high-confidence filtered VCF.
-
-# Filter with BCFTools
-
-bcftools filter -i 'QUAL >= 30' raw_variants.vcf.gz | bcftools view -f PASS -Oz -o high_quality_variants.vcf.
-
-# Merge SNPs and Indels into Complex Variants
-
-To combine adjacent SNPs and indels into haplotypes and complex alleles, use bcftools norm:
-
-bcftools norm -m +any -f reference.fasta filtered_variants.vcf.gz -O z -o final_variants.vcf.gz
-
-    --multiallelics+both → join biallelic sites into multiallelic records, merges SNPs and indels into complex variants.
-    --fasta-ref reference.fasta → Uses the reference genome to correct alleles.
-    --check-ref e
-    --collapse both
-    --output FILE
-    --output-type z → compressed VCF (.vcf.gz)
-    --threads INT
-    --write-index
-
-# Validate the Final VCF
-
-Validate the VCF to ensure correct formatting
-
-bcftools validate final_variants.vcf.gz
-"""
+    bcftools validate final_variants.vcf.gz
+    """
 
     cmd = [BCFTOOLS_BIN]
     cmd.extend(["filter", "-i", "QUAL >= 30", str(in_vcf)])
