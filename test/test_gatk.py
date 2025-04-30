@@ -109,6 +109,14 @@ def test_add_sample_snv_calls_to_db():
             project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, out_vcf=joint_vcf
         )
 
+        cmd = [
+            "uv",
+            "run",
+            "create_gatk_joint_vcf",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)
+
 
 def test_create_gatk_db_script():
     with tempfile.TemporaryDirectory(prefix="gatk_db_test") as project_dir:

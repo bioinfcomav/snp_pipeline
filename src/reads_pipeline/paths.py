@@ -171,6 +171,11 @@ def get_per_sample_vcfs(project_dir) -> list[Path]:
     return [path for path in vcf_dir.iterdir() if str(path).endswith(".vcf.gz")]
 
 
+def get_joint_vcf(project_dir) -> Path:
+    snv_dir = get_snv_dir(project_dir)
+    return snv_dir / "joint_gatk.vcf.gz"
+
+
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
 
