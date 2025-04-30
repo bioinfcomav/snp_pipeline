@@ -8,6 +8,7 @@ from .config import (
     TEST_PROJECT5_DIR,
     TEST_PROJECT6_DIR,
     PROJECT6_GENOME_FAI,
+    PROJECT6_GENOME_FASTA,
 )
 from reads_pipeline.gatk import (
     create_genome_reference,
@@ -102,6 +103,19 @@ def test_add_sample_snv_calls_to_db():
         )
         samples_in_db = get_samples_in_gatk_db(project_dir)
         assert samples_in_db == ["sample1"]
+
+        joint_vcf = project_dir_path / "joint.vcf.gz"
+        do_svn_joint_genotyping_for_all_samples_together(
+            project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, out_vcf=joint_vcf
+        )
+
+        cmd = [
+            "uv",
+            "run",
+            "create_gatk_joint_vcf",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)
 
 
 def test_create_gatk_db_script():

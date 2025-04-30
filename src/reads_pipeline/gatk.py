@@ -357,6 +357,9 @@ def do_svn_joint_genotyping_for_all_samples_together(
     if not out_vcf.suffix == ".gz" and not allow_uncompressed_vcf:
         raise ValueError("Output VCF must have a .gz suffix")
 
+    if out_vcf.exists():
+        raise ValueError(f"GATK joint VCF already exists: {out_vcf}")
+
     db_dir = get_gatk_db_dir(project_dir)
     cmd = [
         "uv",
