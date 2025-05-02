@@ -397,35 +397,3 @@ def filter_vcf_with_gatk(in_vcf, out_vcf, genome_fasta, filters, project_dir):
             )
         )
     run_cmd(cmd, project_dir=project_dir)
-
-
-def filter_and_merge_variants(project_dir: Path, in_vcf: Path, verbose=False):
-    """
-
-    # Merge SNPs and Indels into Complex Variants
-
-    To combine adjacent SNPs and indels into haplotypes and complex alleles, use bcftools norm:
-
-    bcftools norm -m +any -f reference.fasta filtered_variants.vcf.gz -O z -o final_variants.vcf.gz
-
-        --multiallelics+both → join biallelic sites into multiallelic records, merges SNPs and indels into complex variants.
-        --fasta-ref reference.fasta → Uses the reference genome to correct alleles.
-        --check-ref e
-        --collapse both
-        --output FILE
-        --output-type z → compressed VCF (.vcf.gz)
-        --threads INT
-        --write-index
-
-    # Validate the Final VCF
-
-    Validate the VCF to ensure correct formatting
-
-    bcftools validate final_variants.vcf.gz
-    """
-
-    cmd = [BCFTOOLS_BIN]
-    cmd.extend(["filter", "-i", "QUAL >= 30", str(in_vcf)])
-    if verbose:
-        print(" ".join(cmd))
-    run_cmd(cmd, project_dir=project_dir)
