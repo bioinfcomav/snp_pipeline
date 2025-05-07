@@ -34,6 +34,7 @@ def get_args():
 def check_num_clean_reads_vs_mapped_reads(fastp_stats, cram_stats):
     col1 = fastp_stats["num_clean_reads"]
     col2 = cram_stats["total sequences"]
+    col1, col2 = col1.align(col2)
     if not all(col1 == col2):
         combined = pandas.concat(
             [col1, col2],
