@@ -48,6 +48,8 @@ class PipelineConfig:
 
         if "gatk" not in config:
             config["gatk"] = {}
+        if "gatk_filters" not in config:
+            config["gatk_filters"] = {}
 
         self._config = config
 
