@@ -112,8 +112,8 @@ TRIM_QUALS_LINE = (
 def _run_fastp_minimap_for_pair(
     read_group: dict,
     project_dir: Path,
-    stats_dir: Path,
-    crams_dir: Path,
+    crams_parent_dir: Path,
+    stats_parent_dir: Path,
     min_read_len: int,
     fastp_num_threads: int,
     fastp_trim_front1: int,
@@ -140,6 +140,15 @@ def _run_fastp_minimap_for_pair(
     read_group_idx = read_group["idx"]
     read_group_id = read_group["read_group_id"]
     fastq_paths = read_group["fastq_paths"]
+
+    raw_reads_dir = read_group["raw_reads_dir"]
+    dir_name = raw_reads_dir.name
+    stats_dir = stats_parent_dir / dir_name
+    crams_dir = crams_parent_dir / dir_name
+
+    if not dry_run:
+        crams_dir.mkdir(exist_ok=True)
+        stats_dir.mkdir(exist_ok=True)
 
     if not dry_run:
         logging.basicConfig(
@@ -366,6 +375,7 @@ def get_fastq_pairs_to_process(project_dir: Path, read_groups_info: dict):
                     "idx": len(fastq_pairs_to_process) + 1,
                     "read_group_id": read_group_id,
                     "fastq_paths": fastq_pair,
+                    "raw_reads_dir": raw_reads_dir,
                 }
             )
 
@@ -414,10 +424,8 @@ def _run_fastp_minimap(
 
     read_groups_info = get_read_group_info(project_dir)
 
-    raw_reads_parent_dir = get_raw_reads_parent_dir(project_dir)
     stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
     stats_parent_dir.mkdir(exist_ok=True, parents=True)
-    raw_reads_dirs = [path for path in raw_reads_parent_dir.iterdir() if path.is_dir()]
     crams_parent_dir = get_crams_dir(project_dir)
     crams_parent_dir.mkdir(exist_ok=True, parents=True)
 
@@ -430,20 +438,11 @@ def _run_fastp_minimap(
 
     fastq_pairs_to_process = get_fastq_pairs_to_process(project_dir, read_groups_info)
 
-    for raw_reads_dir in raw_reads_dirs:
-        dir_name = raw_reads_dir.name
-        stats_dir = stats_parent_dir / dir_name
-        if not dry_run:
-            stats_dir.mkdir(exist_ok=True)
-        crams_dir = crams_parent_dir / dir_name
-        if not dry_run:
-            crams_dir.mkdir(exist_ok=True)
-
     run_fastp_minimap_for_pair = partial(
         _run_fastp_minimap_for_pair,
         project_dir=project_dir,
-        stats_dir=stats_dir,
-        crams_dir=crams_dir,
+        crams_parent_dir=crams_parent_dir,
+        stats_parent_dir=stats_parent_dir,
         min_read_len=min_read_len,
         fastp_num_threads=fastp_num_threads,
         fastp_trim_front1=fastp_trim_front1,
