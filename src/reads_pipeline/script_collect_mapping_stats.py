@@ -58,9 +58,18 @@ def main():
 
     read_groups_info = get_read_group_info(project_dir)
     pairs_to_process = get_fastq_pairs_to_process(project_dir, read_groups_info)
+
+    bioproject_by_read_group = {}
+    for pair_to_process in pairs_to_process:
+        bioproject_by_read_group[pair_to_process["read_group_id"]] = pair_to_process[
+            "raw_reads_dir"
+        ].name
+
     print(f"Num. pairs to process: {len(pairs_to_process)}")
 
-    fastp_stats = collect_fastp_stats(project_dir=project_dir)
+    fastp_stats = collect_fastp_stats(
+        project_dir=project_dir, bioproject_by_read_group=bioproject_by_read_group
+    )
     fastp_stats.to_excel(
         get_reads_stats_fastp_excel_report_path(project_dir), index=False
     )

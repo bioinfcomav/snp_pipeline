@@ -2,7 +2,7 @@ import logging
 
 import pandas
 
-from .paths import get_read_group_info_xls, get_log_path
+from reads_pipeline.paths import get_read_group_info_xls, get_log_path
 
 
 def get_read_group_info(project_dir) -> dict:
@@ -19,7 +19,6 @@ def get_read_group_info(project_dir) -> dict:
         raise RuntimeError(
             f"Malformed read group excel file, read group ids are not unique: {duplicates}"
         )
-
     read_groups = read_groups_df.to_dict(orient="index")
     clean_read_groups = {}
     for id_, read_group_info in read_groups.items():

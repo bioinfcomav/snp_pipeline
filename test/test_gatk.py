@@ -20,7 +20,6 @@ from reads_pipeline.gatk import (
     do_svn_joint_genotyping_for_all_samples_together,
     do_snv_calling_per_sample,
     filter_vcf_with_gatk,
-    merge_variants,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap_for_fastqs
 from reads_pipeline.paths import MINIMAP2_BIN, get_vcfs_per_sample_dir

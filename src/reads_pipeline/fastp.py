@@ -3,7 +3,7 @@ import json
 
 import pandas
 
-from .paths import (
+from reads_pipeline.paths import (
     get_paired_and_unpaired_read_files_in_dir,
     get_raw_reads_parent_dir,
     get_clean_reads_parent_dir,
@@ -11,7 +11,7 @@ from .paths import (
     FASTP_BIN,
     remove_file,
 )
-from .run_cmd import run_cmd
+from reads_pipeline.run_cmd import run_cmd
 
 
 def _run_fastp_for_pair(
@@ -163,15 +163,26 @@ def _parse_fastp_json(path):
     return result
 
 
-def collect_fastp_stats(project_dir):
+def collect_fastp_stats(project_dir, bioproject_by_read_group):
     stats_parent_dir = get_reads_stats_fastp_parent_dir(project_dir)
     stats_dirs = [path for path in stats_parent_dir.iterdir() if path.is_dir()]
+
     reports = []
     for stats_dir in stats_dirs:
+        bioproject_from_stast_dir = stats_dir.name
+
         json_reports = [
             path for path in stats_dir.iterdir() if str(path).endswith(".fastp.json")
         ]
         for path in json_reports:
+            read_group = path.name.split(".")[0]
+            read_group = read_group
+            bioproject_from_reads = bioproject_by_read_group[read_group]
+            if bioproject_from_reads != bioproject_from_stast_dir:
+                raise RuntimeError(
+                    f"Bioproject mismatch between reads dir ({bioproject_from_reads}) and stats dir: {bioproject_from_stast_dir}"
+                )
+
             read_report = {}
             read_report["dir"] = stats_dir.name
             read_report["file_name"] = path.name

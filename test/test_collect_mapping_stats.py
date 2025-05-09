@@ -14,7 +14,7 @@ def test_run_pipeline():
         project_path = Path(project_dir)
         script_path = "run_mapping"
         cmd = ["uv", "run", str(script_path), str(project_path)]
-        run(cmd, check=True, cwd=project_dir)
+        run(cmd, check=True, cwd=project_dir, capture_output=True)
 
         cmd = ["uv", "run", "collect_mapping_stats", str(project_path)]
-        run(cmd, check=True, cwd=project_dir)
+        run(cmd, check=True, cwd=project_dir, capture_output=True)
