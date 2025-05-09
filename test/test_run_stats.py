@@ -29,5 +29,6 @@ def test_run_fastp():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         shutil.copytree(TEST_PROJECT1_DIR, project_dir, dirs_exist_ok=True)
         run_fastp(project_dir)
-        collect_fastp_stats(project_dir)
+        bioprojects = {"srr24300538": "biproject1"}
+        collect_fastp_stats(project_dir, bioprojects)
         run_fastp(project_dir, re_run=True)
