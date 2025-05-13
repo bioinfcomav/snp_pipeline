@@ -168,12 +168,12 @@ RUN echo "Verifying trim_quals..." && \
 RUN git clone --depth=1 ${SEQ_STATS_REPO} && \
     cd seq_stats && \
     git checkout ${SEQ_STATS_COMMIT} && \
-    cargo install --path . && \
+    cargo install --path . --root /usr/local && \
     cd .. && rm -rf seq_stats
 
 RUN echo "Verifying seq_stats..." && \
-    trim_quals --help && \
-    echo "trim_quals OK"
+    seq_stats --help && \
+    echo "seq_stats OK"
 
 # Create the vscode user
 RUN useradd -m -s /bin/bash vscode && \
