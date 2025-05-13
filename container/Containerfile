@@ -1,0 +1,184 @@
+# syntax=docker/dockerfile:1
+
+LABEL description="Container for genome variant analysis"
+
+# Use the latest stable Debian image
+FROM debian:bookworm-slim
+
+ENV FASTP_VERSION=v0.24.1
+ENV SAMTOOLS_VERSION=1.21
+ENV HTSLIB_VERSION=1.21
+ENV BCFTOOLS_VERSION=1.21
+ENV MINIMAP2_VERSION=v2.29
+ENV GATK_VERSION=4.6.2.0
+ENV TRIM_QUALS_REPO=https://github.com/JoseBlanca/trim_quals.git
+ENV TRIM_QUALS_COMMIT=6a93f0e9d46749899e99dc646ba7c76878b848b0
+ENV SEQ_STATS_REPO=https://github.com/JoseBlanca/seq_stats
+ENV SEQ_STATS_COMMIT=0b8eb9996d3aa1e8e04dae36811b4c941f6ae852
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    bzip2 \
+    unzip \
+    git \
+    coreutils \
+    file \
+    python3 \
+    build-essential \
+    autoconf \
+    zlib1g-dev \
+    libbz2-dev \
+    liblzma-dev \
+    libcurl4-openssl-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    libisal-dev \
+    libdeflate-dev \
+    llvm-dev \
+    libclang-dev \
+    clang \
+    openjdk-17-jre-headless \
+    ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
+
+
+# Install Rust (stable)
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx
+
+RUN echo "Verifying uv..." && \
+    uv --version && \
+    echo "uv installed OK"
+
+
+
+RUN echo "Installing htslib..." && \
+    curl -LO https://github.com/samtools/htslib/releases/download/${HTSLIB_VERSION}/htslib-${HTSLIB_VERSION}.tar.bz2 && \
+    tar -xjf htslib-${HTSLIB_VERSION}.tar.bz2 && \
+    cd htslib-${HTSLIB_VERSION} && \
+    ./configure --prefix=/usr/local && \
+    make && make install && \
+    cd .. && rm -rf htslib-${HTSLIB_VERSION} htslib-${HTSLIB_VERSION}.tar.bz2
+
+RUN echo " Verifying HTSlib..." && \
+    ldconfig && \
+    test -f /usr/local/lib/libhts.so && \
+    tabix --version && \
+    echo "HTSlib installed OK"
+
+RUN echo "Installing samtools..." && \
+    wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSION}/samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
+    tar -xjf samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
+    cd samtools-${SAMTOOLS_VERSION} && \
+    ./configure && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf samtools-${SAMTOOLS_VERSION}*
+
+RUN set -e && \
+    echo "Verifying samtools..." && \
+    samtools --version && \
+    echo "samtools installed OK"
+
+RUN echo "Installing bcftools..." && \
+    curl -LO https://github.com/samtools/bcftools/releases/download/${BCFTOOLS_VERSION}/bcftools-${BCFTOOLS_VERSION}.tar.bz2 && \
+    tar -xjf bcftools-${BCFTOOLS_VERSION}.tar.bz2 && \
+    cd bcftools-${BCFTOOLS_VERSION} && \
+    ./configure --prefix=/usr/local && \
+    make && make install && \
+    cd .. && rm -rf bcftools-${BCFTOOLS_VERSION} bcftools-${BCFTOOLS_VERSION}.tar.bz2
+
+RUN echo "Verifying bcftools..." && \
+    bcftools --version && \
+    echo "bcftools installed OK"
+    
+RUN echo "Installing minimap2..." && \
+    git clone --depth=1 https://github.com/lh3/minimap2.git && \
+    cd minimap2 && \
+    git checkout ${MINIMAP2_VERSION} && \
+    make && cp minimap2 /usr/local/bin && \
+    cd .. && rm -rf minimap2 \
+
+RUN echo "Verifying minimap2..." && \
+    minimap2 --version && \
+    echo "minimap2 installed OK"
+
+RUN echo "Installing fastp..." && \
+    curl -L -o fastp-${FASTP_VERSION}.tar.gz https://github.com/OpenGene/fastp/archive/refs/tags/${FASTP_VERSION}.tar.gz && \
+    tar -xzf fastp-${FASTP_VERSION}.tar.gz && \
+    cd fastp-${FASTP_VERSION#v} && \
+    make && cp fastp /usr/local/bin && \
+    cd .. && rm -rf fastp-${FASTP_VERSION#v} fastp-${FASTP_VERSION}.tar.gz
+
+RUN echo "Verifying fastp..." && \
+    fastp --version && \
+    echo "fastp installed OK"
+
+
+RUN echo "Installing GATK..." && \
+    wget -q https://github.com/broadinstitute/gatk/releases/download/${GATK_VERSION}/gatk-${GATK_VERSION}.zip && \
+    unzip gatk-${GATK_VERSION}.zip && \
+    mv gatk-${GATK_VERSION} /opt/gatk && \
+    ln -s /opt/gatk/gatk /usr/local/bin/gatk && \
+    rm gatk-${GATK_VERSION}.zip
+
+RUN echo "Verifying GATK..." && \
+    gatk --version && \
+    echo "GATK installed OK"
+
+
+RUN echo "Installing FastQC..." && \
+    curl -LO https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.12.1.zip && \
+    unzip fastqc_v0.12.1.zip && \
+    chmod +x FastQC/fastqc && \
+    mv FastQC /opt/fastqc && \
+    ln -s /opt/fastqc/fastqc /usr/local/bin/fastqc && \
+    rm fastqc_v0.12.1.zip
+
+RUN echo "Verifying FastQC..." && \
+    fastqc --version && \
+    echo "FastQC installed OK"
+
+
+RUN git clone --depth=1 ${TRIM_QUALS_REPO} && \
+    cd trim_quals && \
+    git checkout ${TRIM_QUALS_COMMIT} && \
+    cargo install --path . --root /usr/local && \
+    cd .. && rm -rf trim_quals
+
+RUN echo "Verifying trim_quals..." && \
+    trim_quals --help && \
+    echo "trim_quals OK"
+
+RUN git clone --depth=1 ${SEQ_STATS_REPO} && \
+    cd seq_stats && \
+    git checkout ${SEQ_STATS_COMMIT} && \
+    cargo install --path . && \
+    cd .. && rm -rf seq_stats
+
+RUN echo "Verifying seq_stats..." && \
+    trim_quals --help && \
+    echo "trim_quals OK"
+
+# Create the vscode user
+RUN useradd -m -s /bin/bash vscode && \
+    echo 'vscode ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Set default working directory and user
+USER vscode
+WORKDIR /workspace
