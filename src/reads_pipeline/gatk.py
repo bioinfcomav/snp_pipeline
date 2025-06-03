@@ -229,7 +229,7 @@ def do_snv_calling_per_sample(
     )
 
     if num_snvs_in_parallel > 1:
-        with Pool(4) as pool:
+        with Pool(num_snvs_in_parallel) as pool:
             res = pool.map(do_snv_calling_for_sample, sample_infos_todo.values())
     else:
         res = map(do_snv_calling_for_sample, sample_infos_todo.values())
