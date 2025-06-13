@@ -167,6 +167,9 @@ def _run_fastp_minimap_for_pair(
     elif len(fastq_paths) == 1:
         fastp_in1 = f"--in1 {fastq_paths[0]}"
         fastp_in2 = ""
+    else:
+        raise RuntimeError("fastq_path should have length 1 or 2")
+
     fastp_gobal_trim = ""
     if fastp_trim_front1:
         fastp_gobal_trim += f"--trim_front1={fastp_trim_front1} "
