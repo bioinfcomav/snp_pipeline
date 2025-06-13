@@ -56,6 +56,9 @@ export REF_PATH={ref_path_dir}
 
 {seq_stats_bin} --out-stats {seq_stats_report_path} --seqs-to-stdout - | \\
 
+# command hook
+{cmd1}
+
 # minimap2
 {minimap2_bin} -R {rg_str} -t {minimap_num_threads} -a -x sr {minimap_index} - | \\
 
@@ -136,6 +139,7 @@ def _run_fastp_minimap_for_pair(
     verbose: bool,
     dry_run: bool,
     num_analyses_to_do: int,
+    cmd1: str,
 ):
     read_group_idx = read_group["idx"]
     read_group_id = read_group["read_group_id"]
@@ -277,6 +281,9 @@ def _run_fastp_minimap_for_pair(
         else:
             trim_quals_line = ""
 
+        if cmd1:
+            cmd1 = f"{cmd1} | \\"
+
         script = PIPE_TEMPLATE.format(
             fastp_bin=FASTP_BIN,
             fastp_in1=fastp_in1,
@@ -304,6 +311,7 @@ def _run_fastp_minimap_for_pair(
             trim_quals_line=trim_quals_line,
             ref_path_dir=ref_path_dir,
             samtools_stats_num_threads=samtools_stats_num_threads,
+            cmd1=cmd1,
         )
         try:
             if not dry_run:
@@ -408,6 +416,7 @@ def _run_fastp_minimap(
     re_run=False,
     verbose=True,
     num_mappings_in_parallel=1,
+    cmd1: str = "",
 ):
     if not genome_fasta.exists():
         raise FileNotFoundError(f"Genome fasta file not found: {genome_fasta}")
@@ -468,6 +477,7 @@ def _run_fastp_minimap(
         verbose=verbose,
         dry_run=dry_run,
         num_analyses_to_do=num_analyses_to_do,
+        cmd1=cmd1,
     )
 
     if num_mappings_in_parallel > 1:
@@ -506,6 +516,7 @@ def run_fastp_minimap_for_fastqs(
     re_run=False,
     verbose=False,
     num_mappings_in_parallel=1,
+    cmd1: str = "",
 ):
     res = _run_fastp_minimap(
         project_dir=project_dir,
@@ -530,6 +541,7 @@ def run_fastp_minimap_for_fastqs(
         dry_run=True,
         num_analyses_to_do=None,
         num_mappings_in_parallel=1,
+        cmd1=cmd1,
     )
     num_analyses_done = res["num_analyses_done"]
     res = _run_fastp_minimap(
@@ -555,6 +567,7 @@ def run_fastp_minimap_for_fastqs(
         dry_run=False,
         num_analyses_to_do=num_analyses_done,
         num_mappings_in_parallel=num_mappings_in_parallel,
+        cmd1=cmd1,
     )
     return res
 

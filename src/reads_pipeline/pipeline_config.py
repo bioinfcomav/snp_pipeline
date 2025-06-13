@@ -34,6 +34,7 @@ DEFAULTS = {
         "db_creation_reader_threads": 4,
     },
     "gatk_filters": {},
+    "mapping_command_hooks": {"cmd1": ""},
 }
 
 
@@ -50,6 +51,8 @@ class PipelineConfig:
             config["gatk"] = {}
         if "gatk_filters" not in config:
             config["gatk_filters"] = {}
+        if "mapping_command_hooks" not in config:
+            config["mapping_command_hooks"] = DEFAULTS["mapping_command_hooks"]
 
         self._config = config
 

@@ -60,6 +60,7 @@ def main():
         re_run=config["general"]["re_run"],
         verbose=config["general"]["verbose"],
         num_mappings_in_parallel=config["general"]["num_mappings_in_parallel"],
+        cmd1=config["mapping_command_hooks"]["cmd1"],
     )
 
 
