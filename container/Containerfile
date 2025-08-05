@@ -175,10 +175,4 @@ RUN echo "Verifying seq_stats..." && \
     seq_stats --help && \
     echo "seq_stats OK"
 
-# Create the vscode user
-RUN useradd -m -s /bin/bash vscode && \
-    echo 'vscode ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-# Set default working directory and user
-USER vscode
-WORKDIR /workspace
+RUN mkdir /code
