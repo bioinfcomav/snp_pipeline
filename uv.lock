@@ -355,7 +355,6 @@ dependencies = [
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "pandas" },
-    { name = "run-in-container" },
     { name = "xlrd" },
 ]
 
@@ -363,6 +362,7 @@ dependencies = [
 dev = [
     { name = "hatch-vcs" },
     { name = "pytest" },
+    { name = "run-in-container" },
 ]
 
 [package.metadata]
@@ -371,7 +371,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.2.2" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "run-in-container", git = "https://github.com/JoseBlanca/run_in_container.git" },
     { name = "xlrd", specifier = ">=2.0.1" },
 ]
 
@@ -379,6 +378,7 @@ requires-dist = [
 dev = [
     { name = "hatch-vcs", specifier = ">=0.4.0" },
     { name = "pytest", specifier = ">=8.3.4" },
+    { name = "run-in-container", git = "https://github.com/JoseBlanca/run_in_container.git" },
 ]
 
 [[package]]
