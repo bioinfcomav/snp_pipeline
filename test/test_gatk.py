@@ -140,7 +140,7 @@ def test_add_sample_snv_calls_to_db():
         cmd = [
             "uv",
             "run",
-            "create_gatk_joint_vcf",
+            "create_gatk_joint_vcfs_per_segment",
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)

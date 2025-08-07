@@ -29,6 +29,7 @@ calmd_num_threads=2
 
 [snv_calling]
 gatk_vcf_sample_joining_region_size = 4
+gatk_segment_vcf_sample_joining_n_process = 2
 
 [gatk_filters]
 QD2 = "QD < 2.0"  # Quality by Depth

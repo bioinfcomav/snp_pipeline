@@ -1,5 +1,4 @@
 import sys
-from pathlib import Path
 
 from split_gvcf.split_genome_avoiding_vars import create_var_ranges
 from split_gvcf.split_genome import split_in_empty_loci
