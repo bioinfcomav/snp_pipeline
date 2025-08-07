@@ -1,2 +1,2 @@
 #!/bin/bash
-uv run testc "$@"
+uv run testc -s --tb=short "$@"
