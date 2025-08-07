@@ -4,6 +4,7 @@ from pathlib import Path
 from subprocess import run
 
 from .config import TEST_PROJECT6_DIR
+from reads_pipeline.paths import get_joint_gatk_segments_bed
 
 
 def test_var_ranges():
@@ -13,7 +14,10 @@ def test_var_ranges():
         cmd = [
             "uv",
             "run",
-            "merge_gvcf_var_ranges",
+            "prepare_gatk_sample_var_joining_segments",
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)
+        bed_path = get_joint_gatk_segments_bed(project_dir)
+        line = bed_path.open("rt").readline()
+        assert line == "SL4.0ch01\t1\t4\n"

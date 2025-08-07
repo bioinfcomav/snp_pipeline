@@ -7,6 +7,7 @@ from reads_pipeline.gatk import (
     create_db_with_independent_sample_snv_calls,
     GATKDBFileMode,
     get_samples_in_gatk_db,
+    get_genome_fai_path,
 )
 from reads_pipeline.paths import get_per_sample_vcfs
 
@@ -28,11 +29,7 @@ def main():
 
     config = PipelineConfig(project_dir=project_dir)
 
-    genome_path = config["general"]["genome_path"]
-    fai_path = Path(str(genome_path) + ".fai")
-    if not fai_path.exists():
-        print(f"fasta fai path not found: {fai_path}")
-        sys.exit(4)
+    fai_path = get_genome_fai_path(config)
 
     create_db_with_independent_sample_snv_calls(
         vcfs=get_per_sample_vcfs(project_dir),

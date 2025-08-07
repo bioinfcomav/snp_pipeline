@@ -28,14 +28,26 @@ from reads_pipeline.read_group import get_read_group_info, get_read_group_id_fro
 logger = logging.getLogger(__name__)
 
 
+def _get_genome_fai_path(genome_path):
+    return Path(str(genome_path) + ".fai")
+
+
 def create_faidx(genome_path: Path, project_dir: Path):
     project_dir = get_project_dir(project_dir)
     cmd = [SAMTOOLS_BIN, "faidx", str(genome_path)]
     run_cmd(cmd, project_dir=project_dir)
-    fai_path = Path(str(genome_path) + ".fai")
+    fai_path = _get_genome_fai_path(genome_path)
     if not fai_path.exists():
-        raise ValueError(f"fai genome file not craeted for {genome_path}")
+        raise ValueError(f"fai genome file not created for {genome_path}")
     return {"fai_path": fai_path}
+
+
+def get_genome_fai_path(config):
+    genome_path = config["general"]["genome_path"]
+    fai_path = _get_genome_fai_path(genome_path)
+    if not fai_path.exists():
+        raise RuntimeError(f"fasta fai path not found: {fai_path}")
+    return fai_path
 
 
 def get_chrom_lengths_from_fai(genome_fai_path):

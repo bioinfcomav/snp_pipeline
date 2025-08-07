@@ -27,6 +27,9 @@ calmd_num_threads=2
 [fastqc]
 #num_threads = 4
 
+[snv_calling]
+gatk_vcf_sample_joining_region_size = 4
+
 [gatk_filters]
 QD2 = "QD < 2.0"  # Quality by Depth
 FS60 = "FS > 60.0"  # Fisher Strand Bias

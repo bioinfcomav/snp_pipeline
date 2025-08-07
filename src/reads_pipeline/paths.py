@@ -176,6 +176,12 @@ def get_joint_vcf(project_dir) -> Path:
     return snv_dir / "joint_gatk.vcf.gz"
 
 
+def get_joint_gatk_segments_bed(project_dir) -> Path:
+    snv_dir = get_snv_dir(project_dir)
+    snv_dir.mkdir(exist_ok=True)
+    return snv_dir / "segments_for_gatk_joint_var_calling.bed"
+
+
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
 
