@@ -35,6 +35,7 @@ DEFAULTS = {
     },
     "gatk_filters": {},
     "mapping_command_hooks": {"cmd1": ""},
+    "split_gvcf_vars": {"n_processes_gvcf_parsing": 1},
 }
 
 
@@ -51,6 +52,8 @@ class PipelineConfig:
             config["gatk"] = {}
         if "gatk_filters" not in config:
             config["gatk_filters"] = {}
+        if "split_gvcf_vars" not in config:
+            config["split_gvcf_vars"] = {}
         if "mapping_command_hooks" not in config:
             config["mapping_command_hooks"] = DEFAULTS["mapping_command_hooks"]
 

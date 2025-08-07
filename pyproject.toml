@@ -8,6 +8,7 @@ dependencies = [
     "numpy>=2.2.2",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
+    "split-gvcf",
     "xlrd>=2.0.1",
 ]
 # We're setting the version using hatch-vcs
@@ -20,6 +21,7 @@ do_per_sample_snv_calling = "reads_pipeline.script_do_per_sample_snv_calling:mai
 create_gatk_db = "reads_pipeline.script_create_gatk_db:main"
 check_read_groups_to_map = "reads_pipeline.script_check_read_groups_to_map:main"
 create_gatk_joint_vcf = "reads_pipeline.script_create_gatk_joint_vcf:main"
+merge_gvcf_var_ranges = "reads_pipeline.script_merge_gvcf_variant_ranges:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -30,12 +32,13 @@ source = "vcs"
 
 [tool.uv.sources]
 run-in-container = { git = "https://github.com/JoseBlanca/run_in_container.git" }
+split-gvcf = { git = "https://github.com/JoseBlanca/split-gvcf.git" }
 
 [dependency-groups]
 dev = [
     "hatch-vcs>=0.4.0",
     "pytest>=8.3.4",
-    "run-in-container",
+    "run-in-container>=0.1.1",
 ]
 
 [tool.run_in_container]

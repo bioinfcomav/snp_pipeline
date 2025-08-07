@@ -195,3 +195,16 @@ def is_gzip_file(path: Path) -> bool:
     with open(path, "rb") as f:
         magic = f.read(2)
     return magic == b"\x1f\x8b"
+
+
+def get_cache_dir(project_dir) -> Path:
+    project_dir = get_project_dir(project_dir)
+    cache_dir = project_dir / "cache"
+    cache_dir.mkdir(exist_ok=True)
+    return cache_dir
+
+
+def get_gvcf_ranges_working_dir(project_dir) -> Path:
+    dir_ = get_cache_dir(project_dir) / "gvcf_ranges"
+    dir_.mkdir(exist_ok=True)
+    return dir_

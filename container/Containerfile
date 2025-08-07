@@ -15,6 +15,7 @@ ENV TRIM_QUALS_REPO=https://github.com/JoseBlanca/trim_quals.git
 ENV TRIM_QUALS_COMMIT=6a93f0e9d46749899e99dc646ba7c76878b848b0
 ENV SEQ_STATS_REPO=https://github.com/JoseBlanca/seq_stats
 ENV SEQ_STATS_COMMIT=0b8eb9996d3aa1e8e04dae36811b4c941f6ae852
+ENV GVCF_PARSER_REPO=https://github.com/JoseBlanca/gvcf_parser_rs.git
 
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -174,5 +175,15 @@ RUN git clone --depth=1 ${SEQ_STATS_REPO} && \
 RUN echo "Verifying seq_stats..." && \
     seq_stats --help && \
     echo "seq_stats OK"
+
+RUN git clone --depth=1 ${GVCF_PARSER_REPO} && \
+    cd gvcf_parser_rs && \
+    cargo install --path . --root /usr/local && \
+    cd .. && rm -rf gvcf_parser_rs
+
+RUN echo "Verifying gvcf_parser_rs..." && \
+    save_var_regions_as_parquet --help && \
+    echo "gvcf_parser_rs OK"
+
 
 RUN mkdir /code
