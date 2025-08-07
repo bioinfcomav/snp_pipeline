@@ -22,7 +22,11 @@ from reads_pipeline.gatk import (
     filter_vcf_with_gatk,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap_for_fastqs
-from reads_pipeline.paths import MINIMAP2_BIN, get_vcfs_per_sample_dir
+from reads_pipeline.paths import (
+    MINIMAP2_BIN,
+    get_vcfs_per_sample_dir,
+    get_joint_gatk_segments_bed,
+)
 
 
 def _prepare_snv_calling_test_dir(project_dir):
@@ -126,6 +130,12 @@ def test_add_sample_snv_calls_to_db():
             filters=filters,
             project_dir=project_dir,
         )
+
+        bed = get_joint_gatk_segments_bed(project_dir)
+        with bed.open("wt") as fhand:
+            fhand.write("SL4.0ch01\t1\t1000\n")
+            fhand.write("SL4.0ch01\t1001\t2000\n")
+            fhand.flush()
 
         cmd = [
             "uv",

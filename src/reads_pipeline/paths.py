@@ -176,6 +176,14 @@ def get_joint_vcf(project_dir) -> Path:
     return snv_dir / "joint_gatk.vcf.gz"
 
 
+def get_joint_vcfs_per_segment_dir(project_dir) -> Path:
+    snv_dir = get_snv_dir(project_dir)
+    snv_dir.mkdir(exist_ok=True)
+    joint_dir = snv_dir / "joint_vcfs_per_segment"
+    joint_dir.mkdir(exist_ok=True)
+    return joint_dir
+
+
 def get_joint_gatk_segments_bed(project_dir) -> Path:
     snv_dir = get_snv_dir(project_dir)
     snv_dir.mkdir(exist_ok=True)
