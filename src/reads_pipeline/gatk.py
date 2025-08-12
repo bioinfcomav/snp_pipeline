@@ -391,7 +391,7 @@ def create_db_with_independent_sample_snv_calls(
         reader_threads=reader_threads,
         gatk_log_dir=gatk_log_dir,
     )
-    if n_gatk_db_interval_creations_in_parallel:
+    if n_gatk_db_interval_creations_in_parallel == 1:
         list(map(create_db_for_interval, genomic_intervals))
     else:
         with Pool(n_gatk_db_interval_creations_in_parallel) as pool:
