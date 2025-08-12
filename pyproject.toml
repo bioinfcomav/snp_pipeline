@@ -20,6 +20,7 @@ collect_mapping_stats = "reads_pipeline.script_collect_mapping_stats:main"
 do_per_sample_snv_calling = "reads_pipeline.script_do_per_sample_snv_calling:main"
 create_gatk_db = "reads_pipeline.script_create_gatk_db:main"
 check_read_groups_to_map = "reads_pipeline.script_check_read_groups_to_map:main"
+create_genome_intervals_for_gatk = "reads_pipeline.script_create_genome_intervals_for_gatk:main"
 create_gatk_joint_vcfs_per_segment = "reads_pipeline.script_create_gatk_joint_vcfs_per_segment:main"
 prepare_gatk_sample_var_joining_segments = "reads_pipeline.script_prepare_gatk_sample_var_joining_segments:main"
 

@@ -190,6 +190,26 @@ def get_joint_gatk_segments_bed(project_dir) -> Path:
     return snv_dir / "segments_for_gatk_joint_var_calling.bed"
 
 
+def get_gatk_intervals_bed(project_dir) -> Path:
+    snv_dir = get_snv_dir(project_dir)
+    snv_dir.mkdir(exist_ok=True)
+    return snv_dir / "intervals_for_gatk_db_and_var_calling.bed"
+
+
+def get_gatk_interval_db_dir(project_dir, chrom, start, end):
+    base_dir = get_gatk_db_dir(project_dir)
+    return base_dir / f"{chrom}:{start}-{end}"
+
+
+def get_gatk_interval_db_dirs(project_dir):
+    base_dir = get_gatk_db_dir(project_dir)
+    return [
+        dir_
+        for dir_ in base_dir.iterdir()
+        if dir_.is_dir() and ":" in dir_.name and "-" in dir_.name
+    ]
+
+
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
 

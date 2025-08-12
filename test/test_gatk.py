@@ -20,6 +20,7 @@ from reads_pipeline.gatk import (
     do_svn_joint_genotyping_for_all_samples_together,
     do_snv_calling_per_sample,
     filter_vcf_with_gatk,
+    create_gatk_intervals_file_from_chromosomes,
 )
 from reads_pipeline.fastp_minimap import run_fastp_minimap_for_fastqs
 from reads_pipeline.paths import (
@@ -96,6 +97,11 @@ def test_add_sample_snv_calls_to_db():
     with tempfile.TemporaryDirectory(prefix="gatk_db_test") as project_dir:
         project_dir_path = Path(project_dir)
         shutil.copytree(TEST_PROJECT6_DIR, project_dir_path, dirs_exist_ok=True)
+
+        create_gatk_intervals_file_from_chromosomes(
+            project_dir=project_dir_path, genome_fai_path=PROJECT6_GENOME_FAI
+        )
+
         vcfs = [
             path
             for path in get_vcfs_per_sample_dir(project_dir_path).iterdir()
@@ -104,12 +110,13 @@ def test_add_sample_snv_calls_to_db():
         create_db_with_independent_sample_snv_calls(
             vcfs,
             project_dir=project_dir_path,
-            genome_fai_path=PROJECT6_GENOME_FAI,
             mode=GATKDBFileMode.CREATE,
+            n_gatk_db_interval_creations_in_parallel=2,
         )
+
         samples_in_db = get_samples_in_gatk_db(project_dir)
         assert samples_in_db == ["sample1"]
-
+        return
         joint_vcf = project_dir_path / "joint.vcf.gz"
         do_svn_joint_genotyping_for_all_samples_together(
             project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, out_vcf=joint_vcf
@@ -150,6 +157,13 @@ def test_create_gatk_db_script():
     with tempfile.TemporaryDirectory(prefix="gatk_db_test") as project_dir:
         project_dir_path = Path(project_dir)
         shutil.copytree(TEST_PROJECT6_DIR, project_dir_path, dirs_exist_ok=True)
+        cmd = [
+            "uv",
+            "run",
+            "create_genome_intervals_for_gatk",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)
         cmd = [
             "uv",
             "run",

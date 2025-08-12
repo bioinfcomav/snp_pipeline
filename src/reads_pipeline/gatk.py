@@ -9,6 +9,8 @@ from enum import Enum
 import shutil
 from functools import partial
 from multiprocessing import Pool
+import functools
+import subprocess
 
 
 from reads_pipeline.run_cmd import run_cmd
@@ -18,10 +20,12 @@ from reads_pipeline.paths import (
     GATK_PYTHON_BIN,
     get_tmp_dir,
     get_gatk_db_dir,
-    BCFTOOLS_BIN,
     get_crams_dir,
     get_vcfs_per_sample_dir,
     TABIX_BIN,
+    get_gatk_intervals_bed,
+    get_gatk_interval_db_dir,
+    get_gatk_interval_db_dirs,
 )
 from reads_pipeline.read_group import get_read_group_info, get_read_group_id_from_path
 
@@ -263,21 +267,80 @@ class GATKDBFileMode(Enum):
     UPDATE = "update"
 
 
+def create_gatk_intervals_file_from_chromosomes(
+    project_dir: Path, genome_fai_path: Path
+):
+    chrom_lengths = get_chrom_lengths_from_fai(genome_fai_path)
+    genome_bed_path = get_gatk_intervals_bed(project_dir)
+    with open(genome_bed_path, "wt") as fhand:
+        for chrom, length in chrom_lengths.items():
+            fhand.write(f"{chrom}\t1\t{length}\n")
+        fhand.flush()
+
+
+def get_gatk_intervals(project_dir):
+    genome_bed_path = get_gatk_intervals_bed(project_dir)
+    if not genome_bed_path.exists():
+        raise RuntimeError(
+            f"The file with the genomic intervals has not been created yet: {genome_bed_path}"
+        )
+    for line in genome_bed_path.open("rt"):
+        items = line.split()
+        yield items[0], int(items[1]), int(items[2])
+
+
+def _create_db_for_interval(
+    interval,
+    project_dir,
+    vcfs_per_sample,
+    genomic_cmd,
+    batch_size,
+    reader_threads,
+    gatk_log_dir,
+):
+    chrom, start, end = interval
+    db_dir = get_gatk_interval_db_dir(project_dir, chrom, start, end)
+
+    with tempfile.NamedTemporaryFile(
+        mode="wt", prefix="samples_", suffix=".map"
+    ) as samples_map:
+        for sample, vcfs in vcfs_per_sample.items():
+            samples_map.write(f"{sample}\t{list(vcfs)[0]}\n")
+        samples_map.flush()
+        cmd = [
+            "uv",
+            "run",
+            str(GATK_PYTHON_BIN),
+            "GenomicsDBImport",
+            genomic_cmd,
+            str(db_dir),
+            "--batch-size",
+            str(batch_size),
+            "--sample-name-map",
+            samples_map.name,
+            "--reader-threads",
+            str(reader_threads),
+            "-bypass-feature-reader",
+            "-L",
+            f"{chrom}:{start}-{end}",
+            # "--java-options",
+            # "-DGATK_STACKTRACE_ON_USER_EXCEPTION=true",
+        ]
+        stdout_path = gatk_log_dir / "gatk_db_creation.{chrom}:{start}-{end}.stdout"
+        stderr_path = gatk_log_dir / "gatk_db_creation.{chrom}:{start}-{end}.stderr"
+        stdout = stdout_path.open("wt")
+        stderr = stderr_path.open("wt")
+        subprocess.run(cmd, check=True, stdout=stdout, stderr=stderr)
+
+
 def create_db_with_independent_sample_snv_calls(
     vcfs: list[Path],
     project_dir: Path,
-    genome_fai_path: Path,
     mode: GATKDBFileMode,
+    n_gatk_db_interval_creations_in_parallel: int,
     batch_size: int = 50,
     reader_threads: int = 4,
 ):
-    chrom_lengths = get_chrom_lengths_from_fai(genome_fai_path)
-    genome_bed_path = genome_fai_path.with_suffix(".bed")
-    with open(genome_bed_path, "wt") as fhand:
-        for chrom, length in chrom_lengths.items():
-            fhand.write(f"{chrom}\t0\t{length}\n")
-        fhand.flush()
-
     if mode == GATKDBFileMode.UPDATE:
         samples_in_db = get_samples_in_gatk_db(project_dir)
     else:
@@ -306,13 +369,10 @@ def create_db_with_independent_sample_snv_calls(
                 "Every sample should be in just one VCF, but {sample} is in {vcfs}, otherwise the SNV calling accuracy would be degraded"
             )
 
-    db_dir = get_gatk_db_dir(project_dir)
-    if mode == GATKDBFileMode.CREATE:
-        if db_dir.exists():
-            raise ValueError(f"DB dir already exists, GATK would fail: {db_dir}")
-    else:
-        if not db_dir.exists():
-            raise ValueError(f"DB dir does not exist: {db_dir}")
+    db_base_dir = get_gatk_db_dir(project_dir)
+    db_base_dir.mkdir(exist_ok=True)
+    gatk_log_dir = db_base_dir / "gatk_logs"
+    gatk_log_dir.mkdir(exist_ok=True)
 
     genomic_cmd = (
         "--genomicsdb-update-workspace-path"
@@ -320,47 +380,53 @@ def create_db_with_independent_sample_snv_calls(
         else "--genomicsdb-workspace-path"
     )
 
-    tmp_dir = get_tmp_dir(project_dir)
-    tmp_dir.mkdir(exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="wt", prefix="samples_", suffix=".map"
-    ) as samples_map:
-        for sample, vcfs in vcfs_per_sample.items():
-            samples_map.write(f"{sample}\t{list(vcfs)[0]}\n")
-        samples_map.flush()
-        cmd = [
-            "uv",
-            "run",
-            str(GATK_PYTHON_BIN),
-            "GenomicsDBImport",
-            genomic_cmd,
-            str(db_dir),
-            "--batch-size",
-            str(batch_size),
-            "--sample-name-map",
-            samples_map.name,
-            "--reader-threads",
-            str(reader_threads),
-            "-bypass-feature-reader",
-            "-L",
-            str(genome_bed_path),
-            # "--java-options",
-            # "-DGATK_STACKTRACE_ON_USER_EXCEPTION=true",
-        ]
-        run_cmd(cmd, project_dir=project_dir)
+    genomic_intervals = get_gatk_intervals(project_dir)
+
+    create_db_for_interval = functools.partial(
+        _create_db_for_interval,
+        project_dir=project_dir,
+        vcfs_per_sample=vcfs_per_sample,
+        genomic_cmd=genomic_cmd,
+        batch_size=batch_size,
+        reader_threads=reader_threads,
+        gatk_log_dir=gatk_log_dir,
+    )
+    if n_gatk_db_interval_creations_in_parallel:
+        list(map(create_db_for_interval, genomic_intervals))
+    else:
+        with Pool(n_gatk_db_interval_creations_in_parallel) as pool:
+            list(pool.imap_unordered(create_db_for_interval, genomic_intervals))
+
+
+def _get_samples_in_gatk_db_interval_dir(gatk_dir):
+    json_path = gatk_dir / "callset.json"
+    if not json_path.exists():
+        raise ValueError(f"DB dir does not contain callset.json: {gatk_dir}")
+
+    json_data = json.loads(json_path.open("rt").read())
+    samples = [callset["sample_name"] for callset in json_data["callsets"]]
+    return samples
 
 
 def get_samples_in_gatk_db(project_dir):
     db_dir = get_gatk_db_dir(project_dir)
     if not db_dir.exists():
         raise ValueError(f"DB dir does not exist: {db_dir}")
-    json_path = db_dir / "callset.json"
-    if not json_path.exists():
-        raise ValueError(f"DB dir does not contain callset.json: {db_dir}")
 
-    json_data = json.loads(json_path.open("rt").read())
-    samples = [callset["sample_name"] for callset in json_data["callsets"]]
-    return samples
+    gatk_db_dirs = get_gatk_interval_db_dirs(project_dir)
+    samples = None
+    reference_dir = None
+    for gatk_dir in gatk_db_dirs:
+        this_samples = _get_samples_in_gatk_db_interval_dir(gatk_dir)
+        if samples is None:
+            samples = set(this_samples)
+            reference_dir = gatk_dir
+        else:
+            if samples != this_samples:
+                raise RuntimeError(
+                    f"Samples does not match in gatk interval dirs: {gatk_dir} and {reference_dir}"
+                )
+    return sorted(samples)
 
 
 def do_svn_joint_genotyping_for_all_samples_together(

@@ -3,11 +3,9 @@ import sys
 from reads_pipeline.script_run_mapping import get_project_dir, get_config_path, get_args
 from reads_pipeline.pipeline_config import PipelineConfig
 from reads_pipeline.gatk import (
-    create_db_with_independent_sample_snv_calls,
-    GATKDBFileMode,
-    get_samples_in_gatk_db,
+    create_gatk_intervals_file_from_chromosomes,
+    get_genome_fai_path,
 )
-from reads_pipeline.paths import get_per_sample_vcfs
 
 
 def main():
@@ -27,18 +25,11 @@ def main():
 
     config = PipelineConfig(project_dir=project_dir)
 
-    create_db_with_independent_sample_snv_calls(
-        vcfs=get_per_sample_vcfs(project_dir),
-        project_dir=project_dir,
-        mode=GATKDBFileMode.CREATE,
-        batch_size=config["gatk"]["db_creation_batch_size"],
-        reader_threads=config["gatk"]["db_creation_reader_threads"],
-        n_gatk_db_interval_creations_in_parallel=config["gatk"][
-            "n_gatk_db_interval_creations_in_parallel"
-        ],
+    fai_path = get_genome_fai_path(config)
+
+    create_gatk_intervals_file_from_chromosomes(
+        project_dir=project_dir, genome_fai_path=fai_path
     )
-    samples_in_db = get_samples_in_gatk_db(project_dir)
-    print(f"Num samples added to db: {len(samples_in_db)}")
 
 
 if __name__ == "__main__":
