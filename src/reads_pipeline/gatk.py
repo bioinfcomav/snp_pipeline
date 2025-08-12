@@ -326,8 +326,8 @@ def _create_db_for_interval(
             # "--java-options",
             # "-DGATK_STACKTRACE_ON_USER_EXCEPTION=true",
         ]
-        stdout_path = gatk_log_dir / "gatk_db_creation.{chrom}:{start}-{end}.stdout"
-        stderr_path = gatk_log_dir / "gatk_db_creation.{chrom}:{start}-{end}.stderr"
+        stdout_path = gatk_log_dir / f"gatk_db_creation.{chrom}:{start}-{end}.stdout"
+        stderr_path = gatk_log_dir / f"gatk_db_creation.{chrom}:{start}-{end}.stderr"
         stdout = stdout_path.open("wt")
         stderr = stderr_path.open("wt")
         subprocess.run(cmd, check=True, stdout=stdout, stderr=stderr)
