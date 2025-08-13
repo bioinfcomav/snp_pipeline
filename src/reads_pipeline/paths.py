@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from collections import defaultdict
+import re
 
 FASTQC_BIN = "fastqc"
 FASTQ_EXT = ".fastq.gz"
@@ -193,7 +194,13 @@ def get_joint_gatk_segments_bed(project_dir) -> Path:
 def get_gatk_intervals_bed(project_dir) -> Path:
     snv_dir = get_snv_dir(project_dir)
     snv_dir.mkdir(exist_ok=True)
-    return snv_dir / "intervals_for_gatk_db_and_var_calling.bed"
+    return snv_dir / "intervals_for_gatk_db.bed"
+
+
+def get_joint_var_calling_intervals_bed(project_dir) -> Path:
+    snv_dir = get_snv_dir(project_dir)
+    snv_dir.mkdir(exist_ok=True)
+    return snv_dir / "intervals_for_var_calling.bed"
 
 
 def get_gatk_interval_db_dir(project_dir, chrom, start, end):
@@ -202,12 +209,38 @@ def get_gatk_interval_db_dir(project_dir, chrom, start, end):
 
 
 def get_gatk_interval_db_dirs(project_dir):
+    genome_segment_pattern = re.compile(
+        r"""
+    ^\.?                # optional leading dot
+    (?P<chrom>[^:]+)    # chromosome (everything until :)
+    :                   # separator
+    (?P<start>\d+)      # start position (digits)
+    -                   # separator
+    (?P<end>\d+)        # end position (digits)
+    \.?$                # optional trailing dot
+    """,
+        re.VERBOSE,
+    )
+
     base_dir = get_gatk_db_dir(project_dir)
-    return [
-        dir_
-        for dir_ in base_dir.iterdir()
-        if dir_.is_dir() and ":" in dir_.name and "-" in dir_.name
-    ]
+    db_dirs = []
+    for dir_ in base_dir.iterdir():
+        if not dir_.is_dir():
+            continue
+        match = genome_segment_pattern.match(dir_.name)
+        if not match:
+            continue
+        match = match.groupdict()
+        db_dirs.append(
+            {
+                "path": dir_,
+                "chrom": match["chrom"],
+                "start": int(match["start"]),
+                "end": int(match["end"]),
+            }
+        )
+
+    return db_dirs
 
 
 def get_crams_stats_dir(project_dir) -> Path:

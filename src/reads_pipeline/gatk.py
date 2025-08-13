@@ -12,6 +12,8 @@ from multiprocessing import Pool
 import functools
 import subprocess
 
+import pandas
+from genomicranges import GenomicRanges
 
 from reads_pipeline.run_cmd import run_cmd
 from reads_pipeline.paths import (
@@ -26,6 +28,8 @@ from reads_pipeline.paths import (
     get_gatk_intervals_bed,
     get_gatk_interval_db_dir,
     get_gatk_interval_db_dirs,
+    get_joint_var_calling_intervals_bed,
+    get_joint_vcfs_per_segment_dir,
 )
 from reads_pipeline.read_group import get_read_group_info, get_read_group_id_from_path
 
@@ -269,13 +273,20 @@ class GATKDBFileMode(Enum):
 
 def create_gatk_intervals_file_from_chromosomes(
     project_dir: Path, genome_fai_path: Path
-):
+) -> Path:
     chrom_lengths = get_chrom_lengths_from_fai(genome_fai_path)
     genome_bed_path = get_gatk_intervals_bed(project_dir)
     with open(genome_bed_path, "wt") as fhand:
         for chrom, length in chrom_lengths.items():
             fhand.write(f"{chrom}\t1\t{length}\n")
         fhand.flush()
+    return genome_bed_path
+
+
+def _parse_bed(bed_path):
+    for line in bed_path.open("rt"):
+        items = line.split()
+        yield items[0], int(items[1]), int(items[2])
 
 
 def get_gatk_intervals(project_dir):
@@ -284,9 +295,7 @@ def get_gatk_intervals(project_dir):
         raise RuntimeError(
             f"The file with the genomic intervals has not been created yet: {genome_bed_path}"
         )
-    for line in genome_bed_path.open("rt"):
-        items = line.split()
-        yield items[0], int(items[1]), int(items[2])
+    yield from _parse_bed(genome_bed_path)
 
 
 def _create_db_for_interval(
@@ -413,7 +422,9 @@ def get_samples_in_gatk_db(project_dir):
     if not db_dir.exists():
         raise ValueError(f"DB dir does not exist: {db_dir}")
 
-    gatk_db_dirs = get_gatk_interval_db_dirs(project_dir)
+    gatk_db_dirs = [
+        dir_info["path"] for dir_info in get_gatk_interval_db_dirs(project_dir)
+    ]
     samples = None
     reference_dir = None
     for gatk_dir in gatk_db_dirs:
@@ -429,30 +440,134 @@ def get_samples_in_gatk_db(project_dir):
     return sorted(samples)
 
 
-def do_svn_joint_genotyping_for_all_samples_together(
-    project_dir, genome_fasta: Path, out_vcf: Path, allow_uncompressed_vcf=False
-):
-    if not out_vcf.suffix == ".gz" and not allow_uncompressed_vcf:
-        raise ValueError("Output VCF must have a .gz suffix")
+def _parse_bed_into_df(bed_path):
+    seqnames = []
+    starts = []
+    ends = []
+    for chrom, start, end in _parse_bed(bed_path):
+        seqnames.append(chrom)
+        starts.append(start)
+        ends.append(end)
+    return pandas.DataFrame({"seqnames": seqnames, "starts": starts, "ends": ends})
 
-    db_dir = get_gatk_db_dir(project_dir)
-    cmd = [
-        "uv",
-        "run",
-        str(GATK_PYTHON_BIN),
-        "GenotypeGVCFs",
-        "--reference",
-        str(genome_fasta),
-        "--variant",
-        f"gendb://{db_dir}",
-        "--output",
-        str(out_vcf),
-        "--add-output-vcf-command-line",
-    ]
-    run_cmd(cmd, project_dir=project_dir)
+
+def _generate_var_calling_tasks(project_dir):
+    var_calling_intervals_bed = get_joint_var_calling_intervals_bed(project_dir)
+    var_calling_intervals = _parse_bed_into_df(var_calling_intervals_bed)
+    var_calling_intervals = GenomicRanges.from_pandas(var_calling_intervals)
+    out_vcf_dir = get_joint_vcfs_per_segment_dir(project_dir)
+
+    db_dirs = get_gatk_interval_db_dirs(project_dir)
+    for db_dir_info in db_dirs:
+        db_interval = pandas.DataFrame(
+            {
+                "seqnames": [db_dir_info["chrom"]],
+                "starts": [db_dir_info["start"]],
+                "ends": [db_dir_info["end"]],
+            }
+        )
+        db_interval = GenomicRanges.from_pandas(db_interval)
+        for _, interval in var_calling_intervals.intersect(db_interval):
+            chrom = interval.get_seqnames()[0]
+            start = int(interval.get_start()[0])
+            end = int(interval.get_end()[0])
+            out_vcf = out_vcf_dir / f"{chrom}:{start:08}-{end:08}.joint.vcf.gz"
+            if out_vcf.exists():
+                continue
+            task = {
+                "gatk_db_path": db_dir_info["path"],
+                "chrom": chrom,
+                "start": start,
+                "end": end,
+                "out_vcf": out_vcf,
+            }
+            yield task
+
+
+def _run_var_calling_task(task, genome_fasta, project_dir, gatk_filters):
+    out_vcf = task["out_vcf"]
+    vcf_dir = out_vcf.parent
+    working_dir = vcf_dir / "var_calling_tmp"
+    working_dir.mkdir(exist_ok=True)
+    with tempfile.NamedTemporaryFile(prefix=out_vcf.stem, suffix=".vcf.gz") as tmp_vcf:
+        cmd = [
+            "uv",
+            "run",
+            str(GATK_PYTHON_BIN),
+            "GenotypeGVCFs",
+            "--reference",
+            str(genome_fasta),
+            "--variant",
+            f"gendb://{task['gatk_db_path']}",
+            "--output",
+            str(tmp_vcf.name),
+            "--add-output-vcf-command-line",
+            "--intervals",
+            f"{task['chrom']}:{task['start']}-{task['end']}",
+        ]
+        run_cmd(cmd, project_dir=project_dir)
+        final_vcf = str(tmp_vcf.name)
+
+        if gatk_filters:
+            filtered_vcf = tempfile.NamedTemporaryFile(
+                prefix=out_vcf.stem, suffix=".filtered.vcf.gz"
+            )
+            filter_vcf_with_gatk(
+                Path(tmp_vcf.name),
+                Path(filtered_vcf.name),
+                genome_fasta,
+                gatk_filters,
+                project_dir,
+            )
+            final_vcf = str(filtered_vcf.name)
+
+        shutil.move(final_vcf, str(out_vcf))
+    return {"working_dir": working_dir, "joint_vcf": out_vcf}
+
+
+def do_svn_joint_genotyping_for_all_samples_together(
+    project_dir, genome_fasta: Path, n_processes: int, gatk_filters: dict | None = None
+):
+    if not gatk_filters:
+        gatk_filters = {}
+
+    var_calling_tasks = _generate_var_calling_tasks(project_dir)
+
+    run_var_calling = partial(
+        _run_var_calling_task,
+        genome_fasta=genome_fasta,
+        project_dir=project_dir,
+        gatk_filters=gatk_filters,
+    )
+
+    if n_processes == 1:
+        results = map(run_var_calling, var_calling_tasks)
+    else:
+        with Pool(n_processes) as worker_pool:
+            results = worker_pool.imap_unordered(run_var_calling, var_calling_tasks)
+
+    results = map(run_var_calling, var_calling_tasks)
+
+    working_dirs = set()
+    joint_vcfs = []
+    for result in results:
+        working_dirs.add(result["working_dir"])
+        joint_vcfs.append(result["joint_vcf"])
+    for working_dir in working_dirs:
+        working_dir.rmdir()
+    return {"joint_vcfs": joint_vcfs}
+
+
+def get_or_create_vcf_index(vcf: Path, project_dir):
+    index_path = Path(str(vcf) + ".tbi")
+    if not index_path.exists():
+        cmd = ["uv", "run", str(GATK_PYTHON_BIN), "IndexFeatureFile", "-I", str(vcf)]
+        run_cmd(cmd, project_dir=project_dir)
+    return index_path
 
 
 def filter_vcf_with_gatk(in_vcf, out_vcf, genome_fasta, filters, project_dir):
+    get_or_create_vcf_index(in_vcf, project_dir)
     cmd = [
         "uv",
         "run",

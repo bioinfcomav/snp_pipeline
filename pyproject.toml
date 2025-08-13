@@ -4,11 +4,11 @@ description = "Pipeline to clean and map reads"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "genomicranges>=0.7.1",
     "matplotlib>=3.10.0",
     "numpy>=2.2.2",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
-    "split-gvcf",
     "xlrd>=2.0.1",
 ]
 # We're setting the version using hatch-vcs
@@ -21,7 +21,7 @@ do_per_sample_snv_calling = "reads_pipeline.script_do_per_sample_snv_calling:mai
 create_gatk_db = "reads_pipeline.script_create_gatk_db:main"
 check_read_groups_to_map = "reads_pipeline.script_check_read_groups_to_map:main"
 create_genome_intervals_for_gatk = "reads_pipeline.script_create_genome_intervals_for_gatk:main"
-create_gatk_joint_vcfs_per_segment = "reads_pipeline.script_create_gatk_joint_vcfs_per_segment:main"
+do_var_joining_per_segment = "reads_pipeline.script_do_var_joining_per_segment:main"
 prepare_gatk_sample_var_joining_segments = "reads_pipeline.script_prepare_gatk_sample_var_joining_segments:main"
 
 [build-system]
@@ -33,7 +33,6 @@ source = "vcs"
 
 [tool.uv.sources]
 run-in-container = { git = "https://github.com/JoseBlanca/run_in_container.git" }
-split-gvcf = { git = "https://github.com/JoseBlanca/split-gvcf.git" }
 
 [dependency-groups]
 dev = [

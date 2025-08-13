@@ -5,7 +5,6 @@ from subprocess import run
 
 
 from .config import (
-    TEST_PROJECT2_DIR,
     TEST_PROJECT5_DIR,
     TEST_PROJECT6_DIR,
     PROJECT6_GENOME_FAI,
@@ -13,7 +12,6 @@ from .config import (
 )
 from reads_pipeline.gatk import (
     create_genome_reference,
-    do_sample_snv_calling_basic_germline,
     create_db_with_independent_sample_snv_calls,
     get_samples_in_gatk_db,
     GATKDBFileMode,
@@ -27,6 +25,7 @@ from reads_pipeline.paths import (
     MINIMAP2_BIN,
     get_vcfs_per_sample_dir,
     get_joint_gatk_segments_bed,
+    get_joint_var_calling_intervals_bed,
 )
 
 
@@ -98,7 +97,7 @@ def test_add_sample_snv_calls_to_db():
         project_dir_path = Path(project_dir)
         shutil.copytree(TEST_PROJECT6_DIR, project_dir_path, dirs_exist_ok=True)
 
-        create_gatk_intervals_file_from_chromosomes(
+        genome_bed_path = create_gatk_intervals_file_from_chromosomes(
             project_dir=project_dir_path, genome_fai_path=PROJECT6_GENOME_FAI
         )
 
@@ -116,11 +115,15 @@ def test_add_sample_snv_calls_to_db():
 
         samples_in_db = get_samples_in_gatk_db(project_dir)
         assert samples_in_db == ["sample1"]
-        return
-        joint_vcf = project_dir_path / "joint.vcf.gz"
-        do_svn_joint_genotyping_for_all_samples_together(
-            project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, out_vcf=joint_vcf
+
+        var_calling_bed_path = get_joint_var_calling_intervals_bed(project_dir)
+        var_calling_bed_path.symlink_to(genome_bed_path)
+
+        res = do_svn_joint_genotyping_for_all_samples_together(
+            project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, n_processes=1
         )
+
+        joint_vcf = res["joint_vcfs"][0]
         filtered_vcf = project_dir_path / "joint.filtered.vcf.gz"
         filters = {
             "QD2": "QD < 2.0",  # Quality by Depth
@@ -147,7 +150,7 @@ def test_add_sample_snv_calls_to_db():
         cmd = [
             "uv",
             "run",
-            "create_gatk_joint_vcfs_per_segment",
+            "do_var_joining_per_segment",
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)
