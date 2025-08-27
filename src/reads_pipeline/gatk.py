@@ -544,7 +544,7 @@ def do_svn_joint_genotyping_for_all_samples_together(
         results = map(run_var_calling, var_calling_tasks)
     else:
         with Pool(n_processes) as worker_pool:
-            results = worker_pool.imap_unordered(run_var_calling, var_calling_tasks)
+            results = worker_pool.map(run_var_calling, var_calling_tasks)
 
     results = map(run_var_calling, var_calling_tasks)
 

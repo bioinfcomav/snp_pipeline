@@ -28,7 +28,6 @@ calmd_num_threads=2
 #num_threads = 4
 
 [snv_calling]
-gatk_vcf_sample_joining_region_size = 4
 gatk_segment_vcf_sample_joining_n_process = 2
 snv_join_calling_segment_sizes = 450
 
