@@ -467,7 +467,7 @@ def _generate_var_calling_tasks(project_dir):
             }
         )
         db_interval = GenomicRanges.from_pandas(db_interval)
-        for _, interval in var_calling_intervals.intersect(db_interval):
+        for _, interval in var_calling_intervals.subset_by_overlaps(db_interval):
             chrom = interval.get_seqnames()[0]
             start = int(interval.get_start()[0])
             end = int(interval.get_end()[0])
