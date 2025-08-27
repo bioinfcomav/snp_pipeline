@@ -489,7 +489,9 @@ def _run_var_calling_task(task, genome_fasta, project_dir, gatk_filters):
     vcf_dir = out_vcf.parent
     working_dir = vcf_dir / "var_calling_tmp"
     working_dir.mkdir(exist_ok=True)
-    with tempfile.NamedTemporaryFile(prefix=out_vcf.stem, suffix=".vcf.gz") as tmp_vcf:
+    with tempfile.NamedTemporaryFile(
+        prefix=out_vcf.stem, suffix=".vcf.gz", dir=working_dir
+    ) as tmp_vcf:
         cmd = [
             "uv",
             "run",
