@@ -36,6 +36,13 @@ DEFAULTS = {
     "gatk_filters": {},
     "mapping_command_hooks": {"cmd1": ""},
     "split_gvcf_vars": {"n_processes_gvcf_parsing": 1},
+    "merge_vcf_segments": {
+        "gt_min_depth": None,
+        "gt_min_qual": None,
+        "snv_max_missing_rate": None,
+        "snv_min_qual": None,
+        "snv_min_maf": None,
+    },
 }
 
 
@@ -54,6 +61,8 @@ class PipelineConfig:
             config["gatk_filters"] = {}
         if "split_gvcf_vars" not in config:
             config["split_gvcf_vars"] = {}
+        if "merge_vcf_segments" not in config:
+            config["merge_vcf_segments"] = DEFAULTS["merge_vcf_segments"]
         if "mapping_command_hooks" not in config:
             config["mapping_command_hooks"] = DEFAULTS["mapping_command_hooks"]
 

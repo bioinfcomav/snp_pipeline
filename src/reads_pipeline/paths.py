@@ -185,6 +185,14 @@ def get_joint_vcfs_per_segment_dir(project_dir) -> Path:
     return joint_dir
 
 
+def get_joint_vcfs(project_dir) -> list[Path]:
+    vcfs = []
+    for path in get_joint_vcfs_per_segment_dir(project_dir).iterdir():
+        if str(path).endswith(".vcf.gz"):
+            vcfs.append(path)
+    return vcfs
+
+
 def get_joint_gatk_segments_bed(project_dir) -> Path:
     snv_dir = get_snv_dir(project_dir)
     snv_dir.mkdir(exist_ok=True)

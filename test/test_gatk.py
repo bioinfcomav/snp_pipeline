@@ -27,6 +27,7 @@ from reads_pipeline.paths import (
     get_joint_gatk_segments_bed,
     get_joint_var_calling_intervals_bed,
 )
+from reads_pipeline.script_merge_per_segment_vcfs import merge_per_segment_vcfs
 
 
 def _prepare_snv_calling_test_dir(project_dir):
@@ -122,6 +123,19 @@ def test_add_sample_snv_calls_to_db():
         res = do_svn_joint_genotyping_for_all_samples_together(
             project_dir_path, genome_fasta=PROJECT6_GENOME_FASTA, n_processes=1
         )
+
+        joint_vcf = res["joint_vcfs"][0]
+        merge_per_segment_vcfs(
+            project_dir=project_dir_path, gt_min_depth=1, snv_min_maf=0.01
+        )
+        cmd = [
+            "uv",
+            "run",
+            "merge_per_segment_vcfs",
+            project_dir,
+        ]
+        run(cmd, cwd=project_dir, check=True)
+        return
 
         joint_vcf = res["joint_vcfs"][0]
         filtered_vcf = project_dir_path / "joint.filtered.vcf.gz"

@@ -24,6 +24,7 @@ create_genome_intervals_for_gatk = "reads_pipeline.script_create_genome_interval
 do_var_joining_per_segment = "reads_pipeline.script_do_var_joining_per_segment:main"
 prepare_gatk_sample_var_joining_segments = "reads_pipeline.script_prepare_gatk_sample_var_joining_segments:main"
 prepare_var_joining_segments = "reads_pipeline.script_prepare_var_joining_segements:main"
+merge_per_segment_vcfs = "reads_pipeline.script_merge_per_segment_vcfs:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
