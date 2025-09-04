@@ -524,6 +524,9 @@ def _run_var_calling_task(task, genome_fasta, project_dir, gatk_filters):
             final_vcf = str(filtered_vcf.name)
 
         shutil.move(final_vcf, str(out_vcf))
+        tbi_file = Path(str(final_vcf) + ".tbi")
+        if tbi_file.exists():
+            shutil.move(tbi_file, str(out_vcf) + ".tbi")
     return {"working_dir": working_dir, "joint_vcf": out_vcf}
 
 
