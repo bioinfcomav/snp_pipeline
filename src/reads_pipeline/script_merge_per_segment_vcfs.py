@@ -14,7 +14,7 @@ PIPE_TEMPLATE = """
 {bcf_bin} concat -o - {vcfs} | \\
 {gt_filter_str}
 {snv_filter_str}
-gzip > {out_vcf}
+bgzip > {out_vcf}
 """
 JOINT_VCF_EXT = ".joint.vcf.gz"
 
