@@ -135,7 +135,6 @@ def test_add_sample_snv_calls_to_db():
             project_dir,
         ]
         run(cmd, cwd=project_dir, check=True)
-        return
 
         joint_vcf = res["joint_vcfs"][0]
         filtered_vcf = project_dir_path / "joint.filtered.vcf.gz"

@@ -454,6 +454,10 @@ def _parse_bed_into_df(bed_path):
 def _generate_var_calling_tasks(project_dir):
     var_calling_intervals_bed = get_joint_var_calling_intervals_bed(project_dir)
     var_calling_intervals = _parse_bed_into_df(var_calling_intervals_bed)
+    original_intervarls_order = {
+        (interval["seqnames"], interval["starts"], interval["ends"]): idx
+        for idx, interval in var_calling_intervals.iterrows()
+    }
     var_calling_intervals = GenomicRanges.from_pandas(var_calling_intervals)
     out_vcf_dir = get_joint_vcfs_per_segment_dir(project_dir)
 
@@ -467,10 +471,21 @@ def _generate_var_calling_tasks(project_dir):
             }
         )
         db_interval = GenomicRanges.from_pandas(db_interval)
-        for _, interval in var_calling_intervals.subset_by_overlaps(db_interval):
-            chrom = interval.get_seqnames()[0]
-            start = int(interval.get_start()[0])
-            end = int(interval.get_end()[0])
+        intervals = var_calling_intervals.subset_by_overlaps(db_interval)
+        intervals = [
+            (
+                interval.get_seqnames()[0],
+                int(interval.get_start()[0]),
+                int(interval.get_end()[0]),
+            )
+            for _, interval in intervals
+        ]
+        intervals.sort(
+            key=lambda x: original_intervarls_order.get(
+                x, len(original_intervarls_order) + 1
+            )
+        )
+        for chrom, start, end in intervals:
             out_vcf = out_vcf_dir / f"{chrom}:{start:08}-{end:08}.joint.vcf.gz"
             if out_vcf.exists():
                 continue
