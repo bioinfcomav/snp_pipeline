@@ -462,6 +462,7 @@ def _generate_var_calling_tasks(project_dir):
     out_vcf_dir = get_joint_vcfs_per_segment_dir(project_dir)
 
     db_dirs = get_gatk_interval_db_dirs(project_dir)
+    db_dirs.sort(key=lambda x: (x["chrom"], x["start"]))
     for db_dir_info in db_dirs:
         db_interval = pandas.DataFrame(
             {
