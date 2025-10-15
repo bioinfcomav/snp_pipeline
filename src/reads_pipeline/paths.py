@@ -32,7 +32,7 @@ def get_config_path(project_dir) -> Path:
 
 def get_read_group_info_xls(project_dir) -> Path:
     project_dir = get_project_dir(project_dir)
-    return project_dir / "reads.xls"
+    return project_dir / "reads.xlsx"
 
 
 def get_reads_dir(project_dir, check_exists=True) -> Path:
