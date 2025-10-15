@@ -463,6 +463,7 @@ def _generate_var_calling_tasks(project_dir):
 
     db_dirs = get_gatk_interval_db_dirs(project_dir)
     db_dirs.sort(key=lambda x: (x["chrom"], x["start"]))
+    tasks = []
     for db_dir_info in db_dirs:
         db_interval = pandas.DataFrame(
             {
@@ -481,11 +482,6 @@ def _generate_var_calling_tasks(project_dir):
             )
             for _, interval in intervals
         ]
-        intervals.sort(
-            key=lambda x: original_intervarls_order.get(
-                x, len(original_intervarls_order) + 1
-            )
-        )
         for chrom, start, end in intervals:
             out_vcf = out_vcf_dir / f"{chrom}:{start:08}-{end:08}.joint.vcf.gz"
             if out_vcf.exists():
@@ -497,7 +493,9 @@ def _generate_var_calling_tasks(project_dir):
                 "end": end,
                 "out_vcf": out_vcf,
             }
-            yield task
+            tasks.append(task)
+    tasks.sort(key=lambda x: original_intervarls_order.get((x['chrom'], x['start'], x['end']), len(original_intervarls_order) + 1))
+    return tasks
 
 
 def _run_var_calling_task(task, genome_fasta, project_dir, gatk_filters):
@@ -565,7 +563,7 @@ def do_svn_joint_genotyping_for_all_samples_together(
         results = map(run_var_calling, var_calling_tasks)
     else:
         with Pool(n_processes) as worker_pool:
-            results = worker_pool.map(run_var_calling, var_calling_tasks)
+            results = worker_pool.map(run_var_calling, var_calling_tasks, chunksize=1)
 
     results = map(run_var_calling, var_calling_tasks)
 
