@@ -27,10 +27,20 @@ def main():
 
     config = PipelineConfig(project_dir=project_dir)
 
-    create_db_with_independent_sample_snv_calls(
+    db_mode = config["gatk"]["db_mode"]
+    if db_mode == "create":
+        mode = GATKDBFileMode.CREATE
+    elif db_mode == "update":
+        mode = GATKDBFileMode.UPDATE
+    else:
+        raise ValueError(
+            f"GATK db_mode should be either create or update but it is: {db_mode}"
+        )
+
+    vcfs_per_sample = create_db_with_independent_sample_snv_calls(
         vcfs=get_per_sample_vcfs(project_dir),
         project_dir=project_dir,
-        mode=GATKDBFileMode.CREATE,
+        mode=mode,
         batch_size=config["gatk"]["db_creation_batch_size"],
         reader_threads=config["gatk"]["db_creation_reader_threads"],
         n_gatk_db_interval_creations_in_parallel=config["gatk"][
@@ -38,7 +48,8 @@ def main():
         ],
     )
     samples_in_db = get_samples_in_gatk_db(project_dir)
-    print(f"Num samples added to db: {len(samples_in_db)}")
+    print(f"Num samples added to db: {len(vcfs_per_sample)}")
+    print(f"Num samples in db: {len(samples_in_db)}")
 
 
 if __name__ == "__main__":

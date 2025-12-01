@@ -33,6 +33,7 @@ snv_join_calling_segment_sizes = 450
 
 [gatk]
 n_gatk_db_interval_creations_in_parallel=1
+db_mode = "update"
 
 [gatk_filters]
 QD2 = "QD < 2.0"  # Quality by Depth

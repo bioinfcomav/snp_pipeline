@@ -364,18 +364,23 @@ def create_db_with_independent_sample_snv_calls(
             )
         elif len(samples) == 0:
             raise ValueError(f"VCF must contain at least one sample {vcf}")
+        vcf_sample = samples[0]
+        if mode == GATKDBFileMode.UPDATE:
+            if vcf_sample in samples_in_db:
+                print(f"Skipping sample already in GATK db: {vcf_sample}")
+                continue
+        else:
+            if vcf_sample in samples_in_db:
+                raise ValueError(
+                    f"VCF sample {vcf_sample} is already in the GATK DB, and in GATK db creation mode that is not allowed"
+                )
 
-        if samples[0] in samples_in_db:
-            raise ValueError(
-                f"Sample {samples[0]} is already in the GATK DB, it should not be in another VCF"
-            )
-
-        vcfs_per_sample[samples[0]].add(vcf)
+        vcfs_per_sample[vcf_sample].add(vcf)
 
     for sample, vcfs in vcfs_per_sample.items():
         if len(vcfs) > 1:
             raise ValueError(
-                "Every sample should be in just one VCF, but {sample} is in {vcfs}, otherwise the SNV calling accuracy would be degraded"
+                f"Every sample should be in just one VCF, but {sample} is in {vcfs}, otherwise the SNV calling accuracy would be degraded"
             )
 
     db_base_dir = get_gatk_db_dir(project_dir)
@@ -405,6 +410,7 @@ def create_db_with_independent_sample_snv_calls(
     else:
         with Pool(n_gatk_db_interval_creations_in_parallel) as pool:
             list(pool.imap_unordered(create_db_for_interval, genomic_intervals))
+    return {"vcfs_per_sample": vcfs_per_sample}
 
 
 def _get_samples_in_gatk_db_interval_dir(gatk_dir):
@@ -494,7 +500,11 @@ def _generate_var_calling_tasks(project_dir):
                 "out_vcf": out_vcf,
             }
             tasks.append(task)
-    tasks.sort(key=lambda x: original_intervarls_order.get((x['chrom'], x['start'], x['end']), len(original_intervarls_order) + 1))
+    tasks.sort(
+        key=lambda x: original_intervarls_order.get(
+            (x["chrom"], x["start"], x["end"]), len(original_intervarls_order) + 1
+        )
+    )
     return tasks
 
 

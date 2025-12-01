@@ -32,6 +32,7 @@ DEFAULTS = {
         "num_threads_tabix": 4,
         "db_creation_batch_size": 50,
         "db_creation_reader_threads": 4,
+        "db_mode": "create",
     },
     "gatk_filters": {},
     "mapping_command_hooks": {"cmd1": ""},
