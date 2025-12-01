@@ -46,7 +46,7 @@ def main():
         n_gatk_db_interval_creations_in_parallel=config["gatk"][
             "n_gatk_db_interval_creations_in_parallel"
         ],
-    )
+    )["vcfs_per_sample"]
     samples_in_db = get_samples_in_gatk_db(project_dir)
     print(f"Num samples added to db: {len(vcfs_per_sample)}")
     print(f"Num samples in db: {len(samples_in_db)}")

@@ -126,7 +126,7 @@ def do_sample_snv_calling_basic_germline(
     cmd.extend(["-O", str(out_vcf)])
     cmd.extend(["--mapping-quality-threshold-for-genotyping", str(min_mapq)])
     cmd.extend(["-ERC", "BP_RESOLUTION"])
-    run_cmd(cmd, project_dir=project_dir)
+    run_cmd(cmd, project_dir=project_dir, verbose=True)
 
 
 def get_crams(project_dir):
@@ -383,33 +383,39 @@ def create_db_with_independent_sample_snv_calls(
                 f"Every sample should be in just one VCF, but {sample} is in {vcfs}, otherwise the SNV calling accuracy would be degraded"
             )
 
-    db_base_dir = get_gatk_db_dir(project_dir)
-    db_base_dir.mkdir(exist_ok=True)
-    gatk_log_dir = db_base_dir / "gatk_logs"
-    gatk_log_dir.mkdir(exist_ok=True)
+    if vcfs_per_sample:
+        db_base_dir = get_gatk_db_dir(project_dir)
+        db_base_dir.mkdir(exist_ok=True)
+        gatk_log_dir = db_base_dir / "gatk_logs"
+        gatk_log_dir.mkdir(exist_ok=True)
 
-    genomic_cmd = (
-        "--genomicsdb-update-workspace-path"
-        if mode == GATKDBFileMode.UPDATE
-        else "--genomicsdb-workspace-path"
-    )
+        genomic_cmd = (
+            "--genomicsdb-update-workspace-path"
+            if mode == GATKDBFileMode.UPDATE
+            else "--genomicsdb-workspace-path"
+        )
 
-    genomic_intervals = get_gatk_intervals(project_dir)
+        genomic_intervals = get_gatk_intervals(project_dir)
 
-    create_db_for_interval = functools.partial(
-        _create_db_for_interval,
-        project_dir=project_dir,
-        vcfs_per_sample=vcfs_per_sample,
-        genomic_cmd=genomic_cmd,
-        batch_size=batch_size,
-        reader_threads=reader_threads,
-        gatk_log_dir=gatk_log_dir,
-    )
-    if n_gatk_db_interval_creations_in_parallel == 1:
-        list(map(create_db_for_interval, genomic_intervals))
+        create_db_for_interval = functools.partial(
+            _create_db_for_interval,
+            project_dir=project_dir,
+            vcfs_per_sample=vcfs_per_sample,
+            genomic_cmd=genomic_cmd,
+            batch_size=batch_size,
+            reader_threads=reader_threads,
+            gatk_log_dir=gatk_log_dir,
+        )
+        if n_gatk_db_interval_creations_in_parallel == 1:
+            list(map(create_db_for_interval, genomic_intervals))
+        else:
+            with Pool(n_gatk_db_interval_creations_in_parallel) as pool:
+                list(pool.imap_unordered(create_db_for_interval, genomic_intervals))
     else:
-        with Pool(n_gatk_db_interval_creations_in_parallel) as pool:
-            list(pool.imap_unordered(create_db_for_interval, genomic_intervals))
+        if mode == GATKDBFileMode.UPDATE:
+            print("No new VCFs to add to the GATK database")
+        else:
+            raise RuntimeError("No VCFS available to create the GATK database")
     return {"vcfs_per_sample": vcfs_per_sample}
 
 

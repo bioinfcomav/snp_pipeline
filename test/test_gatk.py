@@ -49,6 +49,7 @@ def _prepare_snv_calling_test_dir(project_dir):
         minimap_index=minimap_index,
         genome_fasta=genome_reference_path,
         deduplicate=False,
+        force_cram_version="3.0",
     )
     return {
         "genome_fasta": genome_fasta,
@@ -186,4 +187,15 @@ def test_create_gatk_db_script():
             "create_gatk_db",
             project_dir,
         ]
+        run(cmd, cwd=project_dir, check=True)
+
+        config = ""
+        toml_path = project_dir_path / "pipeline.toml"
+        for line in open(toml_path, "rt"):
+            if line.startswith("db_mode"):
+                line = 'db_mode = "update"\n'
+            config += line
+        fhand = open(toml_path, "wt")
+        fhand.write(config)
+        fhand.close()
         run(cmd, cwd=project_dir, check=True)

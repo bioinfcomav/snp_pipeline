@@ -15,6 +15,7 @@ deduplicate = true
 #sort_num_threads = 10
 #duplicates_num_threads=4
 calmd_num_threads=2
+force_cram_version="3.0"
 
 [fastp]
 #min_read_len = 30
