@@ -25,6 +25,7 @@ DEFAULTS = {
         "duplicates_num_threads": 4,
         "calmd_num_threads": 2,
         "samtools_stats_num_threads": 4,
+        "force_cram_version": "",
     },
     "fastqc": {"num_threads": 6},
     "gatk": {

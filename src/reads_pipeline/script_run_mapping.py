@@ -61,6 +61,7 @@ def main():
         verbose=config["general"]["verbose"],
         num_mappings_in_parallel=config["general"]["num_mappings_in_parallel"],
         cmd1=config["mapping_command_hooks"]["cmd1"],
+        force_cram_version=config["samtools"]["force_cram_version"],
     )
 
 

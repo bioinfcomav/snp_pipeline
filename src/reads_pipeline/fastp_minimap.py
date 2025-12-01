@@ -77,7 +77,7 @@ export REF_PATH={ref_path_dir}
 # In the past there has been problems running trim_quals before calmd, so run it after calmd
 {trim_quals_line}
 
-samtools view --reference {genome_fasta} -o {cram_path} - 
+samtools view --reference {genome_fasta} {cram_version} -o {cram_path} - 
 
 # create index
 samtools index {cram_path}
@@ -140,6 +140,7 @@ def _run_fastp_minimap_for_pair(
     dry_run: bool,
     num_analyses_to_do: int,
     cmd1: str,
+    force_cram_version: None | str,
 ):
     read_group_idx = read_group["idx"]
     read_group_id = read_group["read_group_id"]
@@ -284,6 +285,11 @@ def _run_fastp_minimap_for_pair(
         if cmd1:
             cmd1 = f"{cmd1} | \\"
 
+        if force_cram_version:
+            cram_version = f"-O cram,version={force_cram_version}"
+        else:
+            cram_version = ""
+
         script = PIPE_TEMPLATE.format(
             fastp_bin=FASTP_BIN,
             fastp_in1=fastp_in1,
@@ -312,6 +318,7 @@ def _run_fastp_minimap_for_pair(
             ref_path_dir=ref_path_dir,
             samtools_stats_num_threads=samtools_stats_num_threads,
             cmd1=cmd1,
+            cram_version=cram_version,
         )
         try:
             if not dry_run:
@@ -417,6 +424,7 @@ def _run_fastp_minimap(
     verbose=True,
     num_mappings_in_parallel=1,
     cmd1: str = "",
+    force_cram_version: None | str = None,
 ):
     if not genome_fasta.exists():
         raise FileNotFoundError(f"Genome fasta file not found: {genome_fasta}")
@@ -478,6 +486,7 @@ def _run_fastp_minimap(
         dry_run=dry_run,
         num_analyses_to_do=num_analyses_to_do,
         cmd1=cmd1,
+        force_cram_version=force_cram_version,
     )
 
     if num_mappings_in_parallel > 1:
@@ -517,6 +526,7 @@ def run_fastp_minimap_for_fastqs(
     verbose=False,
     num_mappings_in_parallel=1,
     cmd1: str = "",
+    force_cram_version: None | str = None,
 ):
     res = _run_fastp_minimap(
         project_dir=project_dir,
@@ -542,6 +552,7 @@ def run_fastp_minimap_for_fastqs(
         num_analyses_to_do=None,
         num_mappings_in_parallel=1,
         cmd1=cmd1,
+        force_cram_version=force_cram_version,
     )
     num_analyses_done = res["num_analyses_done"]
     res = _run_fastp_minimap(
@@ -568,6 +579,7 @@ def run_fastp_minimap_for_fastqs(
         num_analyses_to_do=num_analyses_done,
         num_mappings_in_parallel=num_mappings_in_parallel,
         cmd1=cmd1,
+        force_cram_version=force_cram_version,
     )
     return res
 
