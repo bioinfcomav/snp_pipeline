@@ -447,7 +447,7 @@ def get_samples_in_gatk_db(project_dir):
             samples = set(this_samples)
             reference_dir = gatk_dir
         else:
-            if samples != this_samples:
+            if sorted(samples) != sorted(this_samples):
                 raise RuntimeError(
                     f"Samples does not match in gatk interval dirs: {gatk_dir} and {reference_dir}"
                 )
