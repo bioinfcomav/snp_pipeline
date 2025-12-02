@@ -126,7 +126,7 @@ def do_sample_snv_calling_basic_germline(
     cmd.extend(["-O", str(out_vcf)])
     cmd.extend(["--mapping-quality-threshold-for-genotyping", str(min_mapq)])
     cmd.extend(["-ERC", "BP_RESOLUTION"])
-    run_cmd(cmd, project_dir=project_dir, verbose=True)
+    run_cmd(cmd, project_dir=project_dir)
 
 
 def get_crams(project_dir):
@@ -352,6 +352,7 @@ def create_db_with_independent_sample_snv_calls(
 ):
     if mode == GATKDBFileMode.UPDATE:
         samples_in_db = get_samples_in_gatk_db(project_dir)
+        print(f"Samples already in the database: {len(samples_in_db)}")
     else:
         samples_in_db = []
 
@@ -377,6 +378,7 @@ def create_db_with_independent_sample_snv_calls(
 
         vcfs_per_sample[vcf_sample].add(vcf)
 
+    print(f"Samples to load into the database: {len(vcfs_per_sample)}")
     for sample, vcfs in vcfs_per_sample.items():
         if len(vcfs) > 1:
             raise ValueError(
