@@ -71,7 +71,7 @@ export REF_PATH={ref_path_dir}
 # Calmd works best on position-sorted input files, as with these it can stream through the reference sequence
 # and so doesn't have to store much reference data at any one time
 # -A when used jointly with -r this option overwrites the original base quality
-{samtools_bin} calmd -Ar -@{calmd_num_threads} - {genome_fasta} | \\
+{samtools_bin}
 
 # trim_quals it reduces the qualities from the read edges
 # In the past there has been problems running trim_quals before calmd, so run it after calmd
