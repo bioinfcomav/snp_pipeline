@@ -67,11 +67,11 @@ export REF_PATH={ref_path_dir}
 
 {deduplicate_and_sort_lines}
 
-# calmd
+# calmd (optional, disabled unless enabled in the config)
 # Calmd works best on position-sorted input files, as with these it can stream through the reference sequence
 # and so doesn't have to store much reference data at any one time
 # -A when used jointly with -r this option overwrites the original base quality
-{samtools_bin} calmd -Ar -@{calmd_num_threads} - {genome_fasta} | \\
+{calmd_line}
 
 # trim_quals it reduces the qualities from the read edges
 # In the past there has been problems running trim_quals before calmd, so run it after calmd
@@ -111,6 +111,8 @@ TRIM_QUALS_LINE = (
     "trim_quals --num-bases {num_bases} --qual-reduction {qual_reduction} - - | \\"
 )
 
+CALMD_LINE = "{samtools_bin} calmd -Ar -@{calmd_num_threads} - {genome_fasta} | \\"
+
 
 def _run_fastp_minimap_for_pair(
     read_group: dict,
@@ -131,6 +133,7 @@ def _run_fastp_minimap_for_pair(
     samtools_stats_num_threads: int,
     genome_fasta: Path,
     deduplicate: bool,
+    calmd: bool,
     re_run: bool,
     read_groups_info: dict,
     trim_quals_num_bases: int,
@@ -282,6 +285,15 @@ def _run_fastp_minimap_for_pair(
         else:
             trim_quals_line = ""
 
+        if calmd:
+            calmd_line = CALMD_LINE.format(
+                samtools_bin=SAMTOOLS_BIN,
+                calmd_num_threads=calmd_num_threads,
+                genome_fasta=genome_fasta,
+            )
+        else:
+            calmd_line = ""
+
         if cmd1:
             cmd1 = f"{cmd1} | \\"
 
@@ -313,7 +325,7 @@ def _run_fastp_minimap_for_pair(
             cram_path=cram_tmp_path,
             cram_stats_path=cram_stats_tmp_path,
             deduplicate_and_sort_lines=deduplicate_line,
-            calmd_num_threads=calmd_num_threads,
+            calmd_line=calmd_line,
             trim_quals_line=trim_quals_line,
             ref_path_dir=ref_path_dir,
             samtools_stats_num_threads=samtools_stats_num_threads,
@@ -407,6 +419,7 @@ def _run_fastp_minimap(
     deduplicate: bool,
     dry_run: bool,
     num_analyses_to_do: int,
+    calmd: bool = False,
     min_read_len=30,
     fastp_num_threads=3,
     fastp_trim_front1=0,
@@ -477,6 +490,7 @@ def _run_fastp_minimap(
         duplicates_num_threads=duplicates_num_threads,
         genome_fasta=genome_fasta,
         deduplicate=deduplicate,
+        calmd=calmd,
         re_run=re_run,
         read_groups_info=read_groups_info,
         trim_quals_num_bases=trim_quals_num_bases,
@@ -509,6 +523,7 @@ def run_fastp_minimap_for_fastqs(
     minimap_index: Path,
     genome_fasta: Path,
     deduplicate: bool,
+    calmd: bool = False,
     min_read_len=30,
     fastp_num_threads=3,
     fastp_trim_front1=0,
@@ -533,6 +548,7 @@ def run_fastp_minimap_for_fastqs(
         minimap_index=minimap_index,
         genome_fasta=genome_fasta,
         deduplicate=deduplicate,
+        calmd=calmd,
         min_read_len=min_read_len,
         fastp_num_threads=fastp_num_threads,
         fastp_trim_front1=fastp_trim_front1,
@@ -560,6 +576,7 @@ def run_fastp_minimap_for_fastqs(
         minimap_index=minimap_index,
         genome_fasta=genome_fasta,
         deduplicate=deduplicate,
+        calmd=calmd,
         min_read_len=min_read_len,
         fastp_num_threads=fastp_num_threads,
         fastp_trim_front1=fastp_trim_front1,

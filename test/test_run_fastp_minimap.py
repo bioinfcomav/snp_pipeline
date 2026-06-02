@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from pathlib import Path
 from subprocess import run
 
 from .config import (
@@ -127,3 +128,38 @@ def test_minimap_in_parallel():
             deduplicate=False,
             num_mappings_in_parallel=2,
         )
+
+
+def _cram_has_calmd_in_header(project_dir) -> bool:
+    cram = next(Path(project_dir).glob("crams/**/*.cram"))
+    header = run(
+        ["samtools", "view", "-H", str(cram)], capture_output=True, text=True, check=True
+    ).stdout
+    return any(
+        line.startswith("@PG") and "calmd" in line for line in header.splitlines()
+    )
+
+
+def test_calmd_is_optional():
+    # calmd is disabled by default: no calmd step in the produced cram
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        shutil.copytree(TEST_PROJECT2_DIR, project_dir, dirs_exist_ok=True)
+        run_fastp_minimap_for_fastqs(
+            project_dir,
+            minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
+            genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
+            deduplicate=False,
+        )
+        assert not _cram_has_calmd_in_header(project_dir)
+
+    # when explicitly enabled, calmd runs and is recorded in the cram header
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        shutil.copytree(TEST_PROJECT2_DIR, project_dir, dirs_exist_ok=True)
+        run_fastp_minimap_for_fastqs(
+            project_dir,
+            minimap_index=MINIMAP_PROJECT2_TOMATO_INDEX,
+            genome_fasta=MINIMAP_PROJECT2_TOMATO_FASTA,
+            deduplicate=False,
+            calmd=True,
+        )
+        assert _cram_has_calmd_in_header(project_dir)

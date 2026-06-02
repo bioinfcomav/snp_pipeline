@@ -46,6 +46,7 @@ def main():
         minimap_index=config["minimap"]["index_path"],
         genome_fasta=config["general"]["genome_path"],
         deduplicate=config["samtools"]["deduplicate"],
+        calmd=config["samtools"]["calmd"],
         min_read_len=config["fastp"]["min_read_len"],
         fastp_num_threads=config["fastp"]["num_threads"],
         fastp_trim_front1=config["fastp"]["trim_front1"],

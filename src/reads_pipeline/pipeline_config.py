@@ -22,6 +22,7 @@ DEFAULTS = {
     "samtools": {
         "sort_num_threads": 8,
         "duplicates_num_threads": 4,
+        "calmd": False,
         "calmd_num_threads": 2,
         "samtools_stats_num_threads": 4,
         "force_cram_version": "",
