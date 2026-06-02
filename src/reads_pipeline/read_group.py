@@ -48,7 +48,7 @@ def create_minimap_rg_str(read_id: str, read_group_info: dict, project_dir):
     if read_group_info.get("platform", ""):
         rg_str += f"\\\\tPL:{read_group_info['platform']}"
     if read_group_info.get("library", ""):
-        rg_str += f"\\\\tPL:{read_group_info['library']}"
+        rg_str += f"\\\\tLB:{read_group_info['library']}"
     return rg_str
 
 
