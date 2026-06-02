@@ -1,18 +1,14 @@
 from pathlib import Path
 import os
 from collections import defaultdict
-import re
 
 FASTQC_BIN = "fastqc"
 FASTQ_EXT = ".fastq.gz"
 FASTP_BIN = "fastp"
 MINIMAP2_BIN = "minimap2"
 SAMTOOLS_BIN = "samtools"
-TABIX_BIN = "tabix"
-BCFTOOLS_BIN = "bcftools"
 TRIM_QUALS_BIN = "trim_quals"
 SEQ_STATS_BIN = "seq_stats"
-GATK_PYTHON_BIN = Path("/opt/gatk/gatk")
 MD5BIN = "md5sum"
 FILE_BIN = "file"
 FASTQC_XLS_STATS_FNAME = "fastqc_stats.xls"
@@ -151,106 +147,6 @@ def get_crams_stats_excel_report_path(project_dir) -> Path:
     return get_crams_dir(project_dir) / "cram_stats.xlsx"
 
 
-def get_snv_dir(project_dir) -> Path:
-    project_dir = get_project_dir(project_dir=project_dir)
-    path = project_dir / "snv_calling"
-    return path
-
-
-def get_gatk_db_dir(project_dir) -> Path:
-    return get_snv_dir(project_dir) / "gatk_db"
-
-
-def get_vcfs_per_sample_dir(project_dir) -> Path:
-    snv_dir = get_snv_dir(project_dir)
-    path = snv_dir / "vcfs_per_sample"
-    return path
-
-
-def get_per_sample_vcfs(project_dir) -> list[Path]:
-    vcf_dir = get_vcfs_per_sample_dir(project_dir)
-    return [path for path in vcf_dir.iterdir() if str(path).endswith(".vcf.gz")]
-
-
-def get_joint_vcf(project_dir) -> Path:
-    snv_dir = get_snv_dir(project_dir)
-    return snv_dir / "joint_gatk.vcf.gz"
-
-
-def get_joint_vcfs_per_segment_dir(project_dir) -> Path:
-    snv_dir = get_snv_dir(project_dir)
-    snv_dir.mkdir(exist_ok=True)
-    joint_dir = snv_dir / "joint_vcfs_per_segment"
-    joint_dir.mkdir(exist_ok=True)
-    return joint_dir
-
-
-def get_joint_vcfs(project_dir) -> list[Path]:
-    vcfs = []
-    for path in get_joint_vcfs_per_segment_dir(project_dir).iterdir():
-        if str(path).endswith(".vcf.gz"):
-            vcfs.append(path)
-    return vcfs
-
-
-def get_joint_gatk_segments_bed(project_dir) -> Path:
-    snv_dir = get_snv_dir(project_dir)
-    snv_dir.mkdir(exist_ok=True)
-    return snv_dir / "segments_for_gatk_joint_var_calling.bed"
-
-
-def get_gatk_intervals_bed(project_dir) -> Path:
-    snv_dir = get_snv_dir(project_dir)
-    snv_dir.mkdir(exist_ok=True)
-    return snv_dir / "intervals_for_gatk_db.bed"
-
-
-def get_joint_var_calling_intervals_bed(project_dir) -> Path:
-    snv_dir = get_snv_dir(project_dir)
-    snv_dir.mkdir(exist_ok=True)
-    return snv_dir / "intervals_for_var_calling.bed"
-
-
-def get_gatk_interval_db_dir(project_dir, chrom, start, end):
-    base_dir = get_gatk_db_dir(project_dir)
-    return base_dir / f"{chrom}:{start}-{end}"
-
-
-def get_gatk_interval_db_dirs(project_dir):
-    genome_segment_pattern = re.compile(
-        r"""
-    ^\.?                # optional leading dot
-    (?P<chrom>[^:]+)    # chromosome (everything until :)
-    :                   # separator
-    (?P<start>\d+)      # start position (digits)
-    -                   # separator
-    (?P<end>\d+)        # end position (digits)
-    \.?$                # optional trailing dot
-    """,
-        re.VERBOSE,
-    )
-
-    base_dir = get_gatk_db_dir(project_dir)
-    db_dirs = []
-    for dir_ in base_dir.iterdir():
-        if not dir_.is_dir():
-            continue
-        match = genome_segment_pattern.match(dir_.name)
-        if not match:
-            continue
-        match = match.groupdict()
-        db_dirs.append(
-            {
-                "path": dir_,
-                "chrom": match["chrom"],
-                "start": int(match["start"]),
-                "end": int(match["end"]),
-            }
-        )
-
-    return db_dirs
-
-
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
 
@@ -277,9 +173,3 @@ def get_cache_dir(project_dir) -> Path:
     cache_dir = project_dir / "cache"
     cache_dir.mkdir(exist_ok=True)
     return cache_dir
-
-
-def get_gvcf_ranges_working_dir(project_dir) -> Path:
-    dir_ = get_cache_dir(project_dir) / "gvcf_ranges"
-    dir_.mkdir(exist_ok=True)
-    return dir_
