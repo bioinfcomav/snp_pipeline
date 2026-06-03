@@ -55,6 +55,8 @@ def main():
         fastp_trim_tail2=config["fastp"]["trim_tail2"],
         minimap_num_threads=config["minimap"]["num_threads"],
         sort_num_threads=config["samtools"]["sort_num_threads"],
+        sort_memory_per_thread=config["samtools"]["sort_memory_per_thread"],
+        sort_scratch_path=config["samtools"]["sort_scratch_path"],
         duplicates_num_threads=config["samtools"]["duplicates_num_threads"],
         calmd_num_threads=config["samtools"]["calmd_num_threads"],
         samtools_stats_num_threads=config["samtools"]["samtools_stats_num_threads"],

@@ -93,7 +93,7 @@ SORT_AND_DEDUPLIATE_LINES = """# When estimating the total number of concurrent 
 # Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
 # It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
 # The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
-{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} - | \\
+{samtools_bin} sort -u -@{sort_num_threads} -m {sort_memory} -T {tmp_dir} - | \\
 
 # The main core of marking duplicates may now be ran on the position-sorted file
 {samtools_bin} markdup -@{duplicates_num_threads} --reference {genome_fasta} - - | \\"""
@@ -105,7 +105,7 @@ SORT_LINES = """# When estimating the total number of concurrent threads to allo
 # Sort is highly parallel so the -@8 option here enables to use of 8 additional CPU threads.
 # It can also be sped up by providing it with more memory, but note the memory option (-m) is per-thread.
 # The -l 1 indicates level 1 compression again. We could also specify -O bam,level=1 as used above.
-{samtools_bin} sort -u -@{sort_num_threads} -T {tmp_dir} --reference {genome_fasta} - | \\"""
+{samtools_bin} sort -u -@{sort_num_threads} -m {sort_memory} -T {tmp_dir} --reference {genome_fasta} - | \\"""
 
 TRIM_QUALS_LINE = (
     "trim_quals --num-bases {num_bases} --qual-reduction {qual_reduction} - - | \\"
@@ -128,6 +128,8 @@ def _run_fastp_minimap_for_pair(
     minimap_index: Path,
     minimap_num_threads: int,
     sort_num_threads: int,
+    sort_memory_per_thread: str,
+    sort_scratch_path: str,
     calmd_num_threads: int,
     duplicates_num_threads: int,
     samtools_stats_num_threads: int,
@@ -260,22 +262,28 @@ def _run_fastp_minimap_for_pair(
                 f"Cleaning and mapping read pair with idx: {read_group_idx}, total to process: {num_analyses_to_do} : {pair_str}"
             )
 
+        # By default samtools sort writes its temporary files to the local tmp
+        # dir, but the user can point -T to a different (e.g. faster) drive.
+        sort_tmp_dir = sort_scratch_path if sort_scratch_path else tmp_dir.name
+
         if deduplicate:
             deduplicate_line = SORT_AND_DEDUPLIATE_LINES.format(
                 samtools_bin=SAMTOOLS_BIN,
                 duplicates_num_threads=duplicates_num_threads,
                 genome_fasta=genome_fasta,
                 cram_path=cram_path,
-                tmp_dir=tmp_dir.name,
+                tmp_dir=sort_tmp_dir,
                 sort_num_threads=sort_num_threads,
+                sort_memory=sort_memory_per_thread,
             )
         else:
             deduplicate_line = SORT_LINES.format(
                 samtools_bin=SAMTOOLS_BIN,
                 genome_fasta=genome_fasta,
                 cram_path=cram_path,
-                tmp_dir=tmp_dir.name,
+                tmp_dir=sort_tmp_dir,
                 sort_num_threads=sort_num_threads,
+                sort_memory=sort_memory_per_thread,
             )
 
         if trim_quals_num_bases > 0:
@@ -428,6 +436,8 @@ def _run_fastp_minimap(
     fastp_trim_tail2=0,
     minimap_num_threads=3,
     sort_num_threads=8,
+    sort_memory_per_thread="4G",
+    sort_scratch_path="",
     duplicates_num_threads=8,
     calmd_num_threads=2,
     samtools_stats_num_threads=4,
@@ -485,6 +495,8 @@ def _run_fastp_minimap(
         minimap_index=minimap_index,
         minimap_num_threads=minimap_num_threads,
         sort_num_threads=sort_num_threads,
+        sort_memory_per_thread=sort_memory_per_thread,
+        sort_scratch_path=sort_scratch_path,
         calmd_num_threads=calmd_num_threads,
         samtools_stats_num_threads=samtools_stats_num_threads,
         duplicates_num_threads=duplicates_num_threads,
@@ -532,6 +544,8 @@ def run_fastp_minimap_for_fastqs(
     fastp_trim_tail2=0,
     minimap_num_threads=3,
     sort_num_threads=8,
+    sort_memory_per_thread="4G",
+    sort_scratch_path="",
     duplicates_num_threads=8,
     calmd_num_threads=2,
     samtools_stats_num_threads=4,
@@ -557,6 +571,8 @@ def run_fastp_minimap_for_fastqs(
         fastp_trim_tail2=fastp_trim_tail2,
         minimap_num_threads=minimap_num_threads,
         sort_num_threads=sort_num_threads,
+        sort_memory_per_thread=sort_memory_per_thread,
+        sort_scratch_path=sort_scratch_path,
         duplicates_num_threads=duplicates_num_threads,
         calmd_num_threads=calmd_num_threads,
         samtools_stats_num_threads=samtools_stats_num_threads,
@@ -585,6 +601,8 @@ def run_fastp_minimap_for_fastqs(
         fastp_trim_tail2=fastp_trim_tail2,
         minimap_num_threads=minimap_num_threads,
         sort_num_threads=sort_num_threads,
+        sort_memory_per_thread=sort_memory_per_thread,
+        sort_scratch_path=sort_scratch_path,
         duplicates_num_threads=duplicates_num_threads,
         calmd_num_threads=calmd_num_threads,
         samtools_stats_num_threads=samtools_stats_num_threads,

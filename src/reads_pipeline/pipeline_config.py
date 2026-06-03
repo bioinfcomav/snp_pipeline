@@ -21,6 +21,8 @@ DEFAULTS = {
     "minimap": {"num_threads": 3},
     "samtools": {
         "sort_num_threads": 8,
+        "sort_memory_per_thread": "4G",
+        "sort_scratch_path": "",
         "duplicates_num_threads": 4,
         "calmd": False,
         "calmd_num_threads": 2,
