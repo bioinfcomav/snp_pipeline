@@ -65,6 +65,8 @@ def main():
         num_mappings_in_parallel=config["general"]["num_mappings_in_parallel"],
         cmd1=config["mapping_command_hooks"]["cmd1"],
         force_cram_version=config["samtools"]["force_cram_version"],
+        trim_quals_num_bases=config["trim_quals"]["num_bases"],
+        trim_quals_qual_reduction=config["trim_quals"]["qual_reduction"],
     )
 
 
