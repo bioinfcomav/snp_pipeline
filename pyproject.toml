@@ -18,6 +18,7 @@ dynamic = ["version"]
 run_mapping = "reads_pipeline.script_run_mapping:main"
 collect_mapping_stats = "reads_pipeline.script_collect_mapping_stats:main"
 check_read_groups_to_map = "reads_pipeline.script_check_read_groups_to_map:main"
+generate_psps = "reads_pipeline.script_generate_psps:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

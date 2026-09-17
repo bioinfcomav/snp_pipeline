@@ -8,6 +8,7 @@ DEFAULTS = {
         "re_run": False,
         "verbose": True,
         "num_mappings_in_parallel": 1,
+        "num_psps_in_parallel": 1,
     },
     "fastp": {
         "min_read_len": 30,
@@ -31,6 +32,17 @@ DEFAULTS = {
     },
     "fastqc": {"num_threads": 6},
     "mapping_command_hooks": {"cmd1": ""},
+    "pop_var_caller": {
+        # An empty path or a 0 means that the pop_var_caller default is used
+        "catalog_path": "",
+        "regions_path": "",
+        "min_copies": "",
+        "min_period": 0,
+        "max_period": 0,
+        "max_str_len": 0,
+        "min_purity": 0.0,
+        "build_index_if_missing": False,
+    },
 }
 
 
@@ -42,9 +54,6 @@ class PipelineConfig:
 
         with config_path.open("rb") as fhand:
             config = tomllib.load(fhand)
-
-        if "mapping_command_hooks" not in config:
-            config["mapping_command_hooks"] = DEFAULTS["mapping_command_hooks"]
 
         self._config = config
 
@@ -65,11 +74,6 @@ class PipelineConfig:
                 "deduplicate is a required bool argument in the samtools section of the config file"
             )
 
-        for tool in DEFAULTS.keys():
-            tool_config = self._config[tool]
-            for one_key in DEFAULTS[tool].keys():
-                tool_config[one_key] = tool_config.get(one_key, DEFAULTS[tool][one_key])
-
         if "general" not in self._config:
             raise RuntimeError["A general section is required in the config file"]
         if "genome_path" not in self._config["general"]:
@@ -80,6 +84,12 @@ class PipelineConfig:
             self._config["general"]["genome_path"] = Path(
                 self._config["general"]["genome_path"]
             )
+
+        for tool in DEFAULTS.keys():
+            # A section with no required parameter can be missing from the config file
+            tool_config = self._config.setdefault(tool, {})
+            for one_key in DEFAULTS[tool].keys():
+                tool_config[one_key] = tool_config.get(one_key, DEFAULTS[tool][one_key])
 
         if value is None:
             value = self._config[key]

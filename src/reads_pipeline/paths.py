@@ -4,6 +4,8 @@ from collections import defaultdict
 
 FASTQC_BIN = "fastqc"
 FASTQ_EXT = ".fastq.gz"
+CRAM_EXT = ".cram"
+PSP_EXT = ".psp"
 FASTP_BIN = "fastp"
 MINIMAP2_BIN = "minimap2"
 SAMTOOLS_BIN = "samtools"
@@ -11,6 +13,7 @@ TRIM_QUALS_BIN = "trim_quals"
 SEQ_STATS_BIN = "seq_stats"
 MD5BIN = "md5sum"
 FILE_BIN = "file"
+POP_VAR_CALLER_BIN = "pop_var_caller"
 FASTQC_XLS_STATS_FNAME = "fastqc_stats.xls"
 
 
@@ -149,6 +152,19 @@ def get_crams_stats_excel_report_path(project_dir) -> Path:
 
 def get_crams_stats_dir(project_dir) -> Path:
     return get_crams_dir(project_dir) / "stats"
+
+
+def get_snp_calling_dir(project_dir) -> Path:
+    project_dir = get_project_dir(project_dir=project_dir)
+    return project_dir / "snp_calling"
+
+
+def get_psps_dir(project_dir) -> Path:
+    return get_snp_calling_dir(project_dir) / "psps"
+
+
+def get_psp_path(project_dir, sample: str) -> Path:
+    return get_psps_dir(project_dir) / f"{sample}{PSP_EXT}"
 
 
 def get_tmp_dir(project_dir) -> Path:

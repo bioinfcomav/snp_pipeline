@@ -14,6 +14,8 @@ ENV TRIM_QUALS_REPO=https://github.com/JoseBlanca/trim_quals.git
 ENV TRIM_QUALS_COMMIT=6a93f0e9d46749899e99dc646ba7c76878b848b0
 ENV SEQ_STATS_REPO=https://github.com/JoseBlanca/seq_stats
 ENV SEQ_STATS_COMMIT=0b8eb9996d3aa1e8e04dae36811b4c941f6ae852
+ENV POP_VAR_CALLER_REPO=https://github.com/JoseBlanca/pop_var_caller.git
+ENV POP_VAR_CALLER_COMMIT=6bc8b807081ca324621d3908c8599ff833cc3141
 
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -161,6 +163,20 @@ RUN git clone --depth=1 ${SEQ_STATS_REPO} && \
 RUN echo "Verifying seq_stats..." && \
     seq_stats --help && \
     echo "seq_stats OK"
+
+
+# pop_var_caller does the SNP calling, its first step is to generate a psp file
+# per sample.  It pins its own rust version in rust-toolchain.toml, so the clone
+# has to be complete enough for rustup to read it.
+RUN git clone ${POP_VAR_CALLER_REPO} && \
+    cd pop_var_caller && \
+    git checkout ${POP_VAR_CALLER_COMMIT} && \
+    cargo install --path . --root /usr/local && \
+    cd .. && rm -rf pop_var_caller
+
+RUN echo "Verifying pop_var_caller..." && \
+    pop_var_caller generate-psps --help && \
+    echo "pop_var_caller OK"
 
 
 RUN mkdir /code
