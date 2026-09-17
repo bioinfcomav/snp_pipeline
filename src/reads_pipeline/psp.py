@@ -24,7 +24,7 @@ from .paths import (
     POP_VAR_CALLER_BIN,
 )
 from .run_cmd import run_cmd
-from .read_group import get_read_group_info, get_read_group_id_from_path
+from .read_group import get_samples_in_cram
 
 logger = logging.getLogger(__name__)
 
@@ -66,19 +66,51 @@ def get_samples_to_process(project_dir) -> list[dict]:
 
     All the crams that share a sample are walked together into one psp,
     because they are the alignments of that one sample.
+
+    The sample of every cram is read from the SM tag of its own @RG header
+    lines, which is what the mapping step wrote there, so the read group excel
+    file is not required for this step.
     """
-    read_groups_info = get_read_group_info(project_dir)
     cram_paths = get_cram_paths(project_dir)
 
     crams_per_sample = {}
+    crams_with_no_sample = []
+    crams_with_several_samples = []
     for cram_path in cram_paths:
-        read_group_id = get_read_group_id_from_path(cram_path)
-        if read_group_id not in read_groups_info:
-            msg = f"Missing read group info for the read group {read_group_id}, found in the cram file: {cram_path}"
-            raise ValueError(msg)
-        sample = read_groups_info[read_group_id]["sample"]
+        samples = get_samples_in_cram(cram_path, project_dir)
+        if not samples:
+            crams_with_no_sample.append(cram_path)
+            continue
+        if len(samples) > 1:
+            crams_with_several_samples.append((cram_path, sorted(samples)))
+            continue
+        sample = samples.pop()
         _check_sample_name_can_be_a_file_name(sample)
         crams_per_sample.setdefault(sample, []).append(cram_path)
+
+    if crams_with_no_sample or crams_with_several_samples:
+        msg = ""
+        if crams_with_no_sample:
+            msg += (
+                "The sample of a cram is read from the SM tag of its @RG header "
+                f"lines, and {len(crams_with_no_sample)} cram(s) have no SM tag:\n"
+            )
+            msg += "".join(f"  {path}\n" for path in crams_with_no_sample)
+            msg += (
+                "Map those reads again, or add the sample to the cram header with: "
+                "samtools addreplacerg\n"
+            )
+        if crams_with_several_samples:
+            msg += (
+                f"{len(crams_with_several_samples)} cram(s) hold several samples, "
+                "so it is not known which psp they belong to:\n"
+            )
+            msg += "".join(
+                f"  {path}: {', '.join(samples)}\n"
+                for path, samples in crams_with_several_samples
+            )
+        logging.error(msg)
+        raise RuntimeError(msg)
 
     samples_to_process = []
     for idx, sample in enumerate(sorted(crams_per_sample.keys()), start=1):

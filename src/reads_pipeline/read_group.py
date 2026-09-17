@@ -1,8 +1,10 @@
 import logging
+from pathlib import Path
 
 import pandas
 
-from reads_pipeline.paths import get_read_group_info_xls, get_log_path
+from reads_pipeline.paths import get_read_group_info_xls, get_log_path, SAMTOOLS_BIN
+from reads_pipeline.run_cmd import run_cmd
 
 
 def get_read_group_info(project_dir) -> dict:
@@ -54,3 +56,38 @@ def create_minimap_rg_str(read_id: str, read_group_info: dict, project_dir):
 
 def get_read_group_id_from_path(path):
     return path.name.split(".")[0]
+
+
+def get_read_groups_in_cram_header(cram_path: Path, project_dir) -> list[dict]:
+    """The @RG lines of an alignment file, read from its own header.
+
+    Only the header is read, so no reference genome is required and no
+    alignment is decoded.
+    """
+    cmd = [SAMTOOLS_BIN, "view", "-H", str(cram_path)]
+    process = run_cmd(cmd, project_dir=project_dir)["process"]
+
+    read_groups = []
+    for line in process.stdout.decode().splitlines():
+        if not line.startswith("@RG\t"):
+            continue
+        read_group = {}
+        for field in line.split("\t")[1:]:
+            tag, sep, value = field.partition(":")
+            if sep:
+                read_group[tag] = value
+        read_groups.append(read_group)
+    return read_groups
+
+
+def get_samples_in_cram(cram_path: Path, project_dir) -> set[str]:
+    """The samples of a cram, taken from the SM tags of its @RG header lines.
+
+    The mapping step writes the sample of every read group into the cram
+    header, so the read group excel file is not needed to know which sample a
+    cram holds.
+    """
+    read_groups = get_read_groups_in_cram_header(cram_path, project_dir)
+    return {
+        read_group["SM"] for read_group in read_groups if read_group.get("SM", "")
+    }

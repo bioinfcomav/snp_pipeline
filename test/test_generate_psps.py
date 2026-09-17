@@ -15,6 +15,15 @@ from reads_pipeline.psp import (
 )
 
 
+def _write_fake_cram(cram_path: Path, read_group_id: str, *samples: str):
+    """A fake cram: a sam header, which samtools reads like a cram's one"""
+    header = "@HD\tVN:1.6\n"
+    for idx, sample in enumerate(samples, start=1):
+        rg_id = read_group_id if idx == 1 else f"{read_group_id}_{idx}"
+        header += f"@RG\tID:{rg_id}\tSM:{sample}\tLB:lib1\n"
+    cram_path.write_text(header)
+
+
 def _create_project(project_dir: Path, read_groups: dict, create_catalog=True):
     """A project with the crams and the read group info already in place"""
     project_dir = Path(project_dir)
@@ -32,8 +41,7 @@ def _create_project(project_dir: Path, read_groups: dict, create_catalog=True):
     crams_dir = get_crams_dir(project_dir) / "bioproject1"
     crams_dir.mkdir(parents=True, exist_ok=True)
     for read_group_id, sample in read_groups.items():
-        # the fake crams hold the sample that the real ones hold in their @RG SM tag
-        (crams_dir / f"{read_group_id}.cram").write_text(sample)
+        _write_fake_cram(crams_dir / f"{read_group_id}.cram", read_group_id, sample)
     # the stats dir lives besides the bioproject dirs and holds no cram
     (get_crams_dir(project_dir) / "stats").mkdir(exist_ok=True)
 
@@ -64,12 +72,40 @@ def test_crams_are_grouped_per_sample():
         ]
 
 
-def test_cram_with_no_read_group_info():
+def test_crams_with_no_sample_in_the_header_are_all_listed():
     with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
         _create_project(project_dir, {"rg1": "sample1"})
-        (get_crams_dir(project_dir) / "bioproject1" / "rg2.cram").touch()
-        with pytest.raises(ValueError):
+        crams_dir = get_crams_dir(project_dir) / "bioproject1"
+        # no @RG line at all, and an @RG line with no SM tag
+        (crams_dir / "rg2.cram").write_text("@HD\tVN:1.6\n")
+        (crams_dir / "rg3.cram").write_text("@HD\tVN:1.6\n@RG\tID:rg3\tLB:lib1\n")
+        with pytest.raises(RuntimeError) as excinfo:
             get_samples_to_process(project_dir)
+        msg = str(excinfo.value)
+        # every offending cram is named, not just the first one
+        assert "rg2.cram" in msg
+        assert "rg3.cram" in msg
+        assert "rg1.cram" not in msg
+        assert "SM" in msg
+
+
+def test_cram_with_several_samples():
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        _create_project(project_dir, {"rg1": "sample1"})
+        crams_dir = get_crams_dir(project_dir) / "bioproject1"
+        _write_fake_cram(crams_dir / "rg2.cram", "rg2", "sample2", "sample3")
+        with pytest.raises(RuntimeError, match="several samples"):
+            get_samples_to_process(project_dir)
+
+
+def test_psps_do_not_need_the_read_group_excel():
+    """The excel lives with the reads, which may not even be mounted"""
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        _create_project(project_dir, {"rg1": "sample1", "rg2": "sample2"})
+        (Path(project_dir) / "reads" / "reads.xlsx").unlink()
+
+        samples_to_process = get_samples_to_process(project_dir)
+        assert [info["sample"] for info in samples_to_process] == ["sample1", "sample2"]
 
 
 def test_samples_already_done_are_skipped():
@@ -120,7 +156,11 @@ output_dir = Path(args[args.index("--output-dir") + 1])
 assert Path(args[args.index("--reference") + 1]).exists()
 assert Path(args[args.index("--catalog") + 1]).exists()
 
-samples = {path.read_text() for path in alignments}
+samples = set()
+for path in alignments:
+    for line in path.read_text().splitlines():
+        if line.startswith("@RG\t"):
+            samples.update(f[3:] for f in line.split("\t") if f.startswith("SM:"))
 assert len(samples) == 1, samples
 sample = samples.pop()
 psp_path = output_dir / (sample + ".psp")
@@ -170,7 +210,9 @@ def test_generate_psps(monkeypatch):
         assert res["num_analyses_done"] == 0
 
         # a new sample is generated, the ones already done are kept
-        (get_crams_dir(project_dir) / "bioproject1" / "rg4.cram").write_text("sample3")
+        _write_fake_cram(
+            get_crams_dir(project_dir) / "bioproject1" / "rg4.cram", "rg4", "sample3"
+        )
         read_groups_df = pandas.DataFrame(
             {
                 "id": ["rg1", "rg2", "rg3", "rg4"],
