@@ -29,6 +29,17 @@ from .read_group import get_samples_in_cram
 logger = logging.getLogger(__name__)
 
 REPEAT_CATALOG_SUFFIX = ".repeats.parquet"
+# pop_var_caller parallelizes with rayon.  generate-psps and estimate-parameters
+# take no --threads option, so the only way of narrowing them is the environment
+# variable that sets the size of the rayon global thread pool
+RAYON_NUM_THREADS_ENV_VAR = "RAYON_NUM_THREADS"
+
+
+def get_rayon_env(num_threads: int) -> None | dict:
+    "The environment that bounds the pop_var_caller threads, zero means every core"
+    if not num_threads:
+        return None
+    return {RAYON_NUM_THREADS_ENV_VAR: str(num_threads)}
 
 
 def get_default_repeat_catalog_path(genome_fasta: Path) -> Path:
@@ -137,6 +148,7 @@ def _generate_psp_for_sample(
     max_str_len: int,
     min_purity: float,
     build_index_if_missing: bool,
+    num_threads: int,
     re_run: bool,
     verbose: bool,
     num_analyses_to_do: int,
@@ -195,7 +207,12 @@ def _generate_psp_for_sample(
         if min_purity:
             cmd.extend(["--min-purity", str(min_purity)])
 
-        run_cmd(cmd, project_dir=project_dir, verbose=verbose)
+        run_cmd(
+            cmd,
+            project_dir=project_dir,
+            verbose=verbose,
+            env=get_rayon_env(num_threads),
+        )
 
         tmp_psp_path = tmp_dir_path / f"{sample}{PSP_EXT}"
         if not tmp_psp_path.exists():
@@ -219,6 +236,7 @@ def generate_psps_for_samples(
     max_str_len: int = 0,
     min_purity: float = 0.0,
     build_index_if_missing: bool = False,
+    num_threads: int = 0,
     re_run: bool = False,
     verbose: bool = True,
     num_psps_in_parallel: int = 1,
@@ -288,6 +306,7 @@ def generate_psps_for_samples(
         max_str_len=max_str_len,
         min_purity=min_purity,
         build_index_if_missing=build_index_if_missing,
+        num_threads=num_threads,
         re_run=re_run,
         verbose=verbose,
         num_analyses_to_do=num_analyses_to_do,

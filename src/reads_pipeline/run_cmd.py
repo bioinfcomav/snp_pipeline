@@ -1,4 +1,5 @@
 import logging
+import os
 from subprocess import run
 from pathlib import Path
 import tempfile
@@ -8,13 +9,19 @@ from .paths import get_log_path
 logger = logging.getLogger(__name__)
 
 
-def run_cmd(cmd, project_dir: Path, verbose=False):
+def run_cmd(cmd, project_dir: Path, verbose=False, env: None | dict = None):
     logging.basicConfig(
         filename=get_log_path(project_dir), filemode="a", level=logging.INFO, force=True
     )
-    logging.info("Running cmd: " + " ".join(cmd))
+    msg = "Running cmd: " + " ".join(cmd)
+    if env:
+        msg += " with env: " + " ".join(f"{key}={value}" for key, value in env.items())
+    logging.info(msg)
 
-    process = run(cmd, check=False, capture_output=True)
+    # The environment given is added to the one of this process, the command
+    # still needs the PATH and everything else to run
+    env = os.environ | env if env else None
+    process = run(cmd, check=False, capture_output=True, env=env)
     if verbose:
         print(f"Running: {cmd}")
     if process.returncode:

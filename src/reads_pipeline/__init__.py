@@ -11,3 +11,8 @@ from .psp import (
     get_samples_to_process,
     get_psp_paths,
 )
+from .parameter_estimation import (
+    estimate_parameters,
+    get_batch_of_each_read_group,
+    declare_sequencing_batches,
+)

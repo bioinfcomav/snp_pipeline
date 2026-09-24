@@ -1,0 +1,320 @@
+format_version = 1
+ploidy = 2
+
+[fitted_from]
+reference_digest = "0123456789abcdef0123456789abcdef"
+samples = ["TS-1", 'Ailsa ‘Craig’ "×2"']
+
+[[fitted_from.read_groups]]
+read_group = 0
+declared_id = "HWI.3"
+library = "lib3"
+sample = "TS-1"
+
+[[fitted_from.read_groups]]
+read_group = 1
+declared_id = "HWI.4"
+library = "lib4"
+sample = "TS-1"
+
+[[fitted_from.read_groups]]
+read_group = 2
+declared_id = "HWI.5"
+library = "lib5"
+sample = 'Ailsa ‘Craig’ "×2"'
+
+[[fitted_from.census.terms]]
+term = "selection seed"
+digest = "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
+
+[[fitted_from.census.terms]]
+term = "reference digest"
+digest = "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"
+
+[[fitted_from.census.terms]]
+term = "analysed region set"
+digest = "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
+
+[[fitted_from.census.terms]]
+term = "repeat catalog build settings"
+digest = "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
+
+[[fitted_from.census.terms]]
+term = "STR routing criteria"
+digest = "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+
+[[fitted_from.census.terms]]
+term = "generic target position count"
+digest = "6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f"
+
+[[fitted_from.census.terms]]
+term = "STR per-stratum cap"
+digest = "70707070707070707070707070707070"
+
+[[fitted_from.census.terms]]
+term = "the loci actually kept"
+digest = "81818181818181818181818181818181"
+
+[[fitted_from.census.terms]]
+term = "per-stratum locus counts"
+digest = "92929292929292929292929292929292"
+
+[[fitted_from.census.terms]]
+term = "per-locus read cap"
+digest = "a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3"
+
+[[fitted_from.census.terms]]
+term = "depth ladder edges"
+digest = "b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4"
+
+[[fitted_from.census.terms]]
+term = "per-position depth cap"
+digest = "c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5"
+
+[[base_quality_calibration.by_read_group]]
+read_group = 0
+
+[base_quality_calibration.by_read_group.error_probability_multiplier]
+value = 1.0324
+warrant = "fitted_here"
+
+[base_quality_calibration.by_read_group.error_probability_multiplier.observations]
+reads = 812344
+
+[[base_quality_calibration.by_read_group]]
+read_group = 1
+
+[base_quality_calibration.by_read_group.error_probability_multiplier]
+value = 1.0
+warrant = "defaulted"
+
+[[base_quality_calibration.by_read_group]]
+read_group = 2
+
+[base_quality_calibration.by_read_group.error_probability_multiplier]
+value = 0.87
+warrant = "supplied"
+
+[base_quality_calibration.by_read_group.error_probability_multiplier.observations]
+reads = 640918
+
+[[contamination.by_read_group]]
+read_group = 0
+library = "lib3"
+
+[contamination.by_read_group.measurement]
+share_of_reads_from_another_sample = 0.031
+markers_with_reads = 4211
+reads_on_markers = 90233
+fitted_from_reads_of = "this_read_groups_own_reads"
+
+[[contamination.by_read_group]]
+read_group = 1
+library = "lib4"
+
+[[contamination.by_read_group]]
+read_group = 2
+library = "lib5"
+
+[contamination.by_read_group.measurement]
+share_of_reads_from_another_sample = 0.0
+markers_with_reads = 2903
+reads_on_markers = 64118
+fitted_from_reads_of = "every_read_of_this_sample"
+
+[sequencing_batches]
+batching_was_declared = true
+
+[[sequencing_batches.by_read_group]]
+read_group = 0
+batch = 0
+
+[[sequencing_batches.by_read_group]]
+read_group = 1
+batch = 0
+
+[[sequencing_batches.by_read_group]]
+read_group = 2
+batch = 1
+
+[[sequencing_batches.by_sample]]
+sample = "TS-1"
+batch = 0
+
+[[sequencing_batches.by_sample]]
+sample = 'Ailsa ‘Craig’ "×2"'
+batch = 1
+
+[[inbreeding.by_sample]]
+sample = "TS-1"
+
+[inbreeding.by_sample.inbreeding_coefficient]
+value = 0.42
+warrant = "fitted_here"
+
+[inbreeding.by_sample.inbreeding_coefficient.observations]
+covered_positions = 180600412
+
+[[inbreeding.by_sample]]
+sample = 'Ailsa ‘Craig’ "×2"'
+
+[inbreeding.by_sample.inbreeding_coefficient]
+value = 0.17
+warrant = "borrowed"
+
+[inbreeding.by_sample.inbreeding_coefficient.observations]
+covered_positions = 9411027
+
+[ordinary_site_prior]
+reference_concentration = 1.0
+alternative_concentration_total = 0.0006
+rung = "fitted_curve"
+
+[repeat_tracts.fallback_length_spectrum_concentration]
+value = 3.5
+warrant = "fitted_here"
+
+[[repeat_tracts.slippage_group_by_read_group]]
+read_group = 0
+slippage_group = 0
+
+[[repeat_tracts.slippage_group_by_read_group]]
+read_group = 1
+slippage_group = 0
+
+[[repeat_tracts.slippage_group_by_read_group]]
+read_group = 2
+slippage_group = 1
+
+[[repeat_tracts.slippage_by_stratum_and_group]]
+period = 1
+reference_repeats = 30
+slippage_group = 0
+share_of_reads_that_slip = 0.19
+shorter_share = 0.77
+fall_off = 0.24
+
+[repeat_tracts.slippage_by_stratum_and_group.share_of_reads_that_slip_origin]
+smoothing = "this_stratum"
+expected_slipped_reads = 12040.25
+
+[repeat_tracts.slippage_by_stratum_and_group.shorter_share_and_fall_off_origin]
+expected_slipped_reads = 12040.25
+fall_off_smoothing = "this_stratum"
+
+[repeat_tracts.slippage_by_stratum_and_group.shorter_share_and_fall_off_origin.shorter_share_smoothing.blend]
+curve_weight = 0.61
+reach = "inside_the_fitted_range"
+
+[repeat_tracts.slippage_by_stratum_and_group.shorter_share_and_fall_off_origin.shorter_share_smoothing.blend.curve]
+shape = "turning"
+intercept = 1.4
+slope = -0.09
+bend = 0.006
+centre_repeats = 22.5
+fitted_from_repeats = 5
+fitted_to_repeats = 40
+held_out_error = 0.167
+strata = 36
+curve_fitted_on = "this_period"
+
+[[repeat_tracts.slippage_by_stratum_and_group]]
+period = 2
+reference_repeats = 6
+slippage_group = 0
+share_of_reads_that_slip = 0.0421
+shorter_share = 0.83
+fall_off = 0.31
+
+[repeat_tracts.slippage_by_stratum_and_group.share_of_reads_that_slip_origin]
+expected_slipped_reads = 8000.5
+
+[repeat_tracts.slippage_by_stratum_and_group.share_of_reads_that_slip_origin.smoothing.blend]
+curve_weight = 0.37
+reach = "inside_the_fitted_range"
+
+[repeat_tracts.slippage_by_stratum_and_group.share_of_reads_that_slip_origin.smoothing.blend.curve]
+rise_shape = 0.55
+intercept = 0.011
+slope = 0.004
+fitted_from_repeats = 5
+fitted_to_repeats = 19
+held_out_error = 0.3333333333333333
+cells = 15
+
+[repeat_tracts.slippage_by_stratum_and_group.shorter_share_and_fall_off_origin]
+expected_slipped_reads = 8000.5
+shorter_share_smoothing = "this_stratum"
+
+[repeat_tracts.slippage_by_stratum_and_group.shorter_share_and_fall_off_origin.fall_off_smoothing.this_periods_curve]
+reach = "above_the_fitted_range"
+
+[repeat_tracts.slippage_by_stratum_and_group.shorter_share_and_fall_off_origin.fall_off_smoothing.this_periods_curve.curve]
+shape = "turning"
+intercept = 1.4
+slope = -0.09
+bend = 0.006
+centre_repeats = 3.0
+fitted_from_repeats = 2
+fitted_to_repeats = 4
+held_out_error = 0.167
+strata = 3
+curve_fitted_on = "this_period"
+
+[[repeat_tracts.slippage_by_stratum_and_group]]
+period = 2
+reference_repeats = 11
+slippage_group = 1
+share_of_reads_that_slip = 0.0913
+shorter_share = 0.79
+fall_off = 0.28
+
+[repeat_tracts.slippage_by_stratum_and_group.share_of_reads_that_slip_origin.smoothing.this_periods_curve]
+reach = "below_the_fitted_range"
+
+[repeat_tracts.slippage_by_stratum_and_group.share_of_reads_that_slip_origin.smoothing.this_periods_curve.curve]
+rise_shape = 0.55
+intercept = 0.011
+slope = 0.004
+fitted_from_repeats = 12
+fitted_to_repeats = 19
+held_out_error = 0.3333333333333333
+cells = 8
+
+[[repeat_tracts.length_spectrum_by_stratum]]
+period = 2
+reference_repeats = 6
+concentration = 3.5
+shares_by_repeat_offset = [0.1, 0.8, 0.1]
+
+[[repeat_tracts.length_spectrum_by_period]]
+period = 2
+concentration = 2.75
+shares_by_repeat_offset = [0.15, 0.7, 0.15]
+
+[[repeat_tracts.substitution_rate_by_stratum]]
+read_group = 0
+period = 2
+reference_repeats = 6
+ploidy = 2
+
+[repeat_tracts.substitution_rate_by_stratum.rate]
+value = 0.0012
+warrant = "borrowed"
+
+[repeat_tracts.substitution_rate_by_stratum.rate.observations]
+bases_compared = 40122
+
+[stated_constants.repeat_tract_outlier_weight]
+value = 0.2
+warrant = "defaulted"
+
+[repeat_routing]
+min_copies = [5, 5, 4, 4, 4, 3]
+min_period = 1
+max_period = 6
+max_str_len = 500
+min_purity = 0.8
+min_flank_bp = 15
+min_score = 0
+bundle_threshold = 15

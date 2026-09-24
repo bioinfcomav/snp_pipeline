@@ -146,6 +146,7 @@ def test_missing_repeat_catalog():
 # It writes one psp per sample, just like pop_var_caller generate-psps does, but
 # it reads the sample from the fake cram instead of walking the alignments
 FAKE_POP_VAR_CALLER = """#!/usr/bin/env python3
+import os
 import sys
 from pathlib import Path
 
@@ -165,6 +166,9 @@ assert len(samples) == 1, samples
 sample = samples.pop()
 psp_path = output_dir / (sample + ".psp")
 psp_path.write_text(",".join(sorted(path.name for path in alignments)))
+(Path(os.environ["RAYON_REPORT_DIR"]) / (sample + ".rayon")).write_text(
+    os.environ.get("RAYON_NUM_THREADS", "unset")
+)
 """
 
 
@@ -176,6 +180,7 @@ def _create_fake_pop_var_caller(
     fake_bin.write_text(content)
     fake_bin.chmod(fake_bin.stat().st_mode | stat.S_IXUSR)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("RAYON_REPORT_DIR", str(bin_dir))
 
 
 def test_generate_psps(monkeypatch):
@@ -267,3 +272,25 @@ def test_a_failed_run_leaves_no_psp(monkeypatch):
             )
         # neither a psp nor a partial file is left behind
         assert not list(get_psps_dir(project_dir).iterdir())
+
+
+def test_num_threads_bounds_the_walk(monkeypatch):
+    """pop_var_caller generate-psps takes no --threads option, so the only way
+    of narrowing every walk is the size of the rayon global thread pool"""
+    with tempfile.TemporaryDirectory(prefix="snp_pipeline_test") as project_dir:
+        project_dir = Path(project_dir)
+        genome_fasta = _create_project(project_dir, {"rg1": "sample1"})
+        _create_fake_pop_var_caller(project_dir / "bin", monkeypatch)
+
+        generate_psps_for_samples(
+            project_dir, genome_fasta=genome_fasta, verbose=False, num_threads=3
+        )
+        rayon_report = project_dir / "bin" / "sample1.rayon"
+        assert rayon_report.read_text() == "3"
+
+        # zero threads means every core, so nothing is said about the pool
+        monkeypatch.delenv("RAYON_NUM_THREADS", raising=False)
+        generate_psps_for_samples(
+            project_dir, genome_fasta=genome_fasta, verbose=False, re_run=True
+        )
+        assert rayon_report.read_text() == "unset"

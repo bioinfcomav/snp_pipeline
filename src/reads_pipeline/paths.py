@@ -15,6 +15,7 @@ MD5BIN = "md5sum"
 FILE_BIN = "file"
 POP_VAR_CALLER_BIN = "pop_var_caller"
 FASTQC_XLS_STATS_FNAME = "fastqc_stats.xls"
+PARAMETERS_FNAME = "parameters.toml"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
@@ -165,6 +166,10 @@ def get_psps_dir(project_dir) -> Path:
 
 def get_psp_path(project_dir, sample: str) -> Path:
     return get_psps_dir(project_dir) / f"{sample}{PSP_EXT}"
+
+
+def get_parameters_path(project_dir) -> Path:
+    return get_snp_calling_dir(project_dir) / PARAMETERS_FNAME
 
 
 def get_tmp_dir(project_dir) -> Path:

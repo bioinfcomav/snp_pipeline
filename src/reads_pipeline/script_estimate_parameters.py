@@ -3,13 +3,13 @@ import argparse
 import sys
 
 from reads_pipeline.paths import get_config_path, get_project_dir
-from reads_pipeline.psp import generate_psps_for_samples
+from reads_pipeline.parameter_estimation import estimate_parameters
 from reads_pipeline.pipeline_config import PipelineConfig
 
 
 def get_args():
     parser = argparse.ArgumentParser(
-        description="Generates the per sample pileup (psp) files using pop_var_caller."
+        description="Estimates the parameters used as priors in the SNP calling."
     )
 
     # project_dir: Defaults to the current working directory
@@ -41,23 +41,20 @@ def main():
     config = PipelineConfig(project_dir=project_dir)
 
     catalog_path = config["pop_var_caller"]["catalog_path"]
-    regions_path = config["pop_var_caller"]["regions_path"]
+    inbreeding = config["pop_var_caller"]["inbreeding"]
 
-    generate_psps_for_samples(
+    estimate_parameters(
         project_dir=project_dir,
         genome_fasta=config["general"]["genome_path"],
         catalog_path=catalog_path if catalog_path else None,
-        regions_path=regions_path if regions_path else None,
-        min_copies=config["pop_var_caller"]["min_copies"],
-        min_period=config["pop_var_caller"]["min_period"],
-        max_period=config["pop_var_caller"]["max_period"],
-        max_str_len=config["pop_var_caller"]["max_str_len"],
-        min_purity=config["pop_var_caller"]["min_purity"],
-        build_index_if_missing=config["pop_var_caller"]["build_index_if_missing"],
-        num_threads=config["pop_var_caller"]["psp_num_threads"],
+        ploidy=config["pop_var_caller"]["ploidy"],
+        # Saying nothing is not the same as saying that the samples are not
+        # inbred, an empty inbreeding means use the fitted coefficient
+        inbreeding=float(inbreeding) if inbreeding != "" else None,
+        declare_batches=config["pop_var_caller"]["declare_sequencing_batches"],
+        num_threads=config["pop_var_caller"]["parameters_num_threads"],
         re_run=config["general"]["re_run"],
         verbose=config["general"]["verbose"],
-        num_psps_in_parallel=config["general"]["num_psps_in_parallel"],
     )
 
 

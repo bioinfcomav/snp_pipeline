@@ -42,6 +42,14 @@ DEFAULTS = {
         "max_str_len": 0,
         "min_purity": 0.0,
         "build_index_if_missing": False,
+        # How many threads every pop_var_caller run uses, zero means every core.
+        # Remember that several psps can be generated at once
+        "psp_num_threads": 0,
+        "parameters_num_threads": 0,
+        "ploidy": 2,
+        # An empty inbreeding means that the fitted coefficient is used
+        "inbreeding": "",
+        "declare_sequencing_batches": True,
     },
 }
 
