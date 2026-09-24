@@ -50,6 +50,18 @@ DEFAULTS = {
         # An empty inbreeding means that the fitted coefficient is used
         "inbreeding": "",
         "declare_sequencing_batches": True,
+        "calling_num_threads": 0,
+        # Calling with the pop_var_caller defaults assumes no base quality
+        # calibration, no contamination and no inbreeding
+        "use_default_parameters": False,
+        # An empty paralog_fdr means that the pop_var_caller default is used, a
+        # zero turns the hidden duplication filter off
+        "paralog_fdr": "",
+        "paralog_filter_tag": False,
+        "max_cohort_locus_span": 0,
+        "max_candidate_alleles": 0,
+        "cohort_locus_builder_regions_len": 0,
+        "index_vcf": True,
     },
 }
 

@@ -14,8 +14,10 @@ SEQ_STATS_BIN = "seq_stats"
 MD5BIN = "md5sum"
 FILE_BIN = "file"
 POP_VAR_CALLER_BIN = "pop_var_caller"
+TABIX_BIN = "tabix"
 FASTQC_XLS_STATS_FNAME = "fastqc_stats.xls"
 PARAMETERS_FNAME = "parameters.toml"
+VCF_FNAME = "variants.vcf.gz"
 
 
 def get_project_dir(project_dir: None | str | Path) -> Path:
@@ -170,6 +172,10 @@ def get_psp_path(project_dir, sample: str) -> Path:
 
 def get_parameters_path(project_dir) -> Path:
     return get_snp_calling_dir(project_dir) / PARAMETERS_FNAME
+
+
+def get_vcf_path(project_dir) -> Path:
+    return get_snp_calling_dir(project_dir) / VCF_FNAME
 
 
 def get_tmp_dir(project_dir) -> Path:

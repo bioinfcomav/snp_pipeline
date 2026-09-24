@@ -20,6 +20,7 @@ collect_mapping_stats = "reads_pipeline.script_collect_mapping_stats:main"
 check_read_groups_to_map = "reads_pipeline.script_check_read_groups_to_map:main"
 generate_psps = "reads_pipeline.script_generate_psps:main"
 estimate_parameters = "reads_pipeline.script_estimate_parameters:main"
+call_snps = "reads_pipeline.script_call_snps:main"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

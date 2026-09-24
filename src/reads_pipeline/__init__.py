@@ -16,3 +16,4 @@ from .parameter_estimation import (
     get_batch_of_each_read_group,
     declare_sequencing_batches,
 )
+from .snp_calling import call_snps
