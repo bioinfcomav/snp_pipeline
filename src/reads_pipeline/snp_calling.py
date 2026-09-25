@@ -25,7 +25,7 @@ from .paths import (
     POP_VAR_CALLER_BIN,
     TABIX_BIN,
 )
-from .run_cmd import run_cmd
+from .run_cmd import run_cmd, setup_logging
 from .psp import get_psp_paths, get_default_repeat_catalog_path
 
 logger = logging.getLogger(__name__)
@@ -80,12 +80,7 @@ def call_snps(
 ):
     project_dir = get_project_dir(project_dir)
 
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    setup_logging(project_dir)
 
     genome_fasta = Path(genome_fasta)
     if not genome_fasta.exists():
@@ -196,7 +191,7 @@ def call_snps(
             cmd.extend(["--threads", str(num_threads)])
 
         logging.info("Calling the cohort snps")
-        run_cmd(cmd, project_dir=project_dir, verbose=verbose)
+        run_cmd(cmd, project_dir=project_dir, verbose=verbose, stream_output=True)
 
         if not tmp_vcf_path.exists():
             msg = f"pop_var_caller call-from-psps ran, but it did not create the expected vcf file: {tmp_vcf_path}"

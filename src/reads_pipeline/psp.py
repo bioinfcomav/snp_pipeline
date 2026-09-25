@@ -23,7 +23,7 @@ from .paths import (
     PSP_EXT,
     POP_VAR_CALLER_BIN,
 )
-from .run_cmd import run_cmd
+from .run_cmd import run_cmd, setup_logging
 from .read_group import get_samples_in_cram
 
 logger = logging.getLogger(__name__)
@@ -157,12 +157,7 @@ def _generate_psp_for_sample(
     cram_paths = sample_info["cram_paths"]
     psp_path = get_psp_path(project_dir, sample)
 
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    setup_logging(project_dir)
 
     if psp_path.exists() and not re_run:
         if verbose:
@@ -212,6 +207,7 @@ def _generate_psp_for_sample(
             project_dir=project_dir,
             verbose=verbose,
             env=get_rayon_env(num_threads),
+            stream_output=True,
         )
 
         tmp_psp_path = tmp_dir_path / f"{sample}{PSP_EXT}"
@@ -243,12 +239,7 @@ def generate_psps_for_samples(
 ):
     project_dir = get_project_dir(project_dir)
 
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    setup_logging(project_dir)
 
     genome_fasta = Path(genome_fasta)
     if not genome_fasta.exists():

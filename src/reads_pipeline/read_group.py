@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas
 
 from reads_pipeline.paths import get_read_group_info_xls, get_log_path, SAMTOOLS_BIN
-from reads_pipeline.run_cmd import run_cmd
+from reads_pipeline.run_cmd import run_cmd, setup_logging
 
 
 def get_read_group_info(project_dir) -> dict:
@@ -31,12 +31,7 @@ def get_read_group_info(project_dir) -> dict:
 
 
 def create_minimap_rg_str(read_id: str, read_group_info: dict, project_dir):
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    setup_logging(project_dir)
     try:
         sample = read_group_info["sample"]
     except KeyError:
@@ -88,6 +83,4 @@ def get_samples_in_cram(cram_path: Path, project_dir) -> set[str]:
     cram holds.
     """
     read_groups = get_read_groups_in_cram_header(cram_path, project_dir)
-    return {
-        read_group["SM"] for read_group in read_groups if read_group.get("SM", "")
-    }
+    return {read_group["SM"] for read_group in read_groups if read_group.get("SM", "")}

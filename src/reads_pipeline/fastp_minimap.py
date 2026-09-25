@@ -29,7 +29,7 @@ from .paths import (
     MD5BIN,
     remove_file,
 )
-from .run_cmd import run_bash_script, run_cmd
+from .run_cmd import run_bash_script, run_cmd, setup_logging
 from .read_group import (
     get_read_group_info,
     create_minimap_rg_str,
@@ -161,12 +161,7 @@ def _run_fastp_minimap_for_pair(
         stats_dir.mkdir(exist_ok=True)
 
     if not dry_run:
-        logging.basicConfig(
-            filename=get_log_path(project_dir),
-            filemode="a",
-            level=logging.INFO,
-            force=True,
-        )
+        setup_logging(project_dir)
     rg_str = create_minimap_rg_str(
         read_group_id, read_groups_info[read_group_id], project_dir
     )
@@ -458,12 +453,7 @@ def _run_fastp_minimap(
 
     project_dir = get_project_dir(project_dir)
 
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    setup_logging(project_dir)
 
     read_groups_info = get_read_group_info(project_dir)
 

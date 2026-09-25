@@ -26,7 +26,7 @@ from .paths import (
     get_parameters_path,
     POP_VAR_CALLER_BIN,
 )
-from .run_cmd import run_cmd
+from .run_cmd import run_cmd, setup_logging
 from .psp import (
     get_cram_paths,
     get_psp_paths,
@@ -233,12 +233,7 @@ def estimate_parameters(
 ):
     project_dir = get_project_dir(project_dir)
 
-    logging.basicConfig(
-        filename=get_log_path(project_dir),
-        filemode="a",
-        level=logging.INFO,
-        force=True,
-    )
+    setup_logging(project_dir)
 
     genome_fasta = Path(genome_fasta)
     if not genome_fasta.exists():
@@ -303,6 +298,7 @@ def estimate_parameters(
             project_dir=project_dir,
             verbose=verbose,
             env=get_rayon_env(num_threads),
+            stream_output=True,
         )
 
         if not tmp_parameters_path.exists():
